@@ -1,0 +1,100 @@
+# Builds ready-to-install files for everyone:
+#   DriveDesk-<ver>-mac-arm64.dmg / -mac-x64.dmg   (macOS, Apple silicon / Intel)
+#   DriveDesk-<ver>-win-x64.exe                    (Windows installer)
+#   DriveDesk-Phone-<ver>.apk                      (Android)
+# Run it from the Actions tab ("Run workflow"), or push a tag like v0.2.0 to also publish a GitHub Release.
+#
+# Optional secrets (builds work without them, but users see an "unidentified developer" warning):
+#   macOS:   CSC_LINK, CSC_KEY_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+#   Windows: WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD
+#   Android: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+name: Build installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install
+      - run: npm run dist:mac
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+      - uses: actions/upload-artifact@v4
+        with: { name: mac, path: dist/*.dmg }
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install
+      - run: npm run dist:win
+        env:
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: dist/*.exe }
+
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: android }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Build APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          VERSION=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
+            gradle assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk "DriveDesk-Phone-$VERSION.apk"
+          else
+            # Debug-signed: installs fine, but each CI build has a different key (uninstall before updating).
+            gradle assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "DriveDesk-Phone-$VERSION.apk"
+          fi
+      - uses: actions/upload-artifact@v4
+        with: { name: android, path: android/DriveDesk-Phone-*.apk }
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [mac, windows, android]
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out, merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          body: |
+            **Download the one for your device:**
+            - Mac with Apple chip (M1 or newer): `DriveDesk-…-mac-arm64.dmg`
+            - Mac with Intel chip: `DriveDesk-…-mac-x64.dmg`
+            - Windows: `DriveDesk-…-win-x64.exe`
+            - Android phone: `DriveDesk-Phone-….apk`
+            Setup steps: see INSTALL.md.
