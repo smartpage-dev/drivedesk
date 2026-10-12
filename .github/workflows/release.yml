@@ -19,32 +19,47 @@ jobs:
   mac:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
       - run: npm install
-      - run: npm run dist:mac
+      - name: Build macOS installers
+        # Signing settings are only passed on when the secrets exist; empty values break electron-builder.
         env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          S_CSC_LINK: ${{ secrets.CSC_LINK }}
+          S_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          S_APPLE_ID: ${{ secrets.APPLE_ID }}
+          S_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          S_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$S_CSC_LINK" ]; then
+            export CSC_LINK="$S_CSC_LINK" CSC_KEY_PASSWORD="$S_CSC_KEY_PASSWORD"
+            if [ -n "$S_APPLE_ID" ]; then
+              export APPLE_ID="$S_APPLE_ID" APPLE_APP_SPECIFIC_PASSWORD="$S_APPLE_APP_SPECIFIC_PASSWORD" APPLE_TEAM_ID="$S_APPLE_TEAM_ID"
+            fi
+          else
+            echo "No signing certificate: building with free ad-hoc signature"
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          npm run dist:mac
       - uses: actions/upload-artifact@v4
         with: { name: mac, path: dist/*.dmg }
 
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
       - run: npm install
-      - run: npm run dist:win
+      - name: Build Windows installer
+        shell: bash
         env:
-          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          S_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          S_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "$S_CSC_LINK" ]; then export CSC_LINK="$S_CSC_LINK" CSC_KEY_PASSWORD="$S_CSC_KEY_PASSWORD"; fi
+          npm run dist:win
       - uses: actions/upload-artifact@v4
         with: { name: windows, path: dist/*.exe }
 
@@ -53,10 +68,10 @@ jobs:
     defaults:
       run: { working-directory: android }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: 17 }
-      - uses: android-actions/setup-android@v3
+      # The Android SDK is preinstalled on GitHub's Ubuntu runners (ANDROID_HOME); Gradle fetches anything missing.
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: '8.11.1' }
       - name: Build APK
