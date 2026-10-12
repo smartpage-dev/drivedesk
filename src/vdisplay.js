@@ -17,7 +17,7 @@ function helperPath() {
   return path.join(__dirname, '..', 'native', 'macos', 'build', 'vdisplay');
 }
 
-function start({ width = 2200, height = 1300, scale = 1.5 } = {}) {
+function start({ width = 2200, height = 1300, scale = 1.5, position = 'right' } = {}) {
   if (process.platform !== 'darwin') {
     state = { ...state, error: 'On Windows, add the virtual display with a virtual display driver (see native/windows/README.md).' };
     return Promise.resolve({ ok: false, error: state.error });
@@ -31,7 +31,7 @@ function start({ width = 2200, height = 1300, scale = 1.5 } = {}) {
   return new Promise((resolve) => {
     let settled = false;
     const done = (r) => { if (!settled) { settled = true; resolve(r); } };
-    proc = spawn(bin, ['--width', String(width), '--height', String(height), '--scale', String(scale), '--name', 'DriveDesk Display'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    proc = spawn(bin, ['--width', String(width), '--height', String(height), '--scale', String(scale), '--position', String(position), '--name', 'DriveDesk Display'], { stdio: ['ignore', 'pipe', 'pipe'] });
     proc.stdout.on('data', (buf) => {
       const m = /READY (\d+)/.exec(String(buf));
       if (m) {

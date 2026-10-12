@@ -33,10 +33,26 @@ Download the files from the project's **Releases** page. If nobody has made the 
 
 ## Connect the car (Mac or Windows)
 
-1. Put the car and laptop on the same network. Easiest: turn on your phone's hotspot and connect both to it.
-2. On the car screen, open the **Browser** app and type the address DriveDesk shows, for example `192.168.1.23`.
-3. Enter the PIN shown on the laptop. The car remembers it next time.
-4. Tap the small tab at the top of the car screen for options.
+Tesla's browser blocks home-network addresses like `192.168.x.x`, so the car can't reach your laptop over normal home Wi-Fi, even when both are on the same network. Instead, the car joins a hotspot made by your laptop. DriveDesk's **Connect your Tesla** section walks you through it; here are the same steps.
+
+**Mac**
+1. Connect your iPhone with a USB cable and turn on **Personal Hotspot**, so the Mac gets internet over USB (Ethernet also works). The car only joins hotspots that have internet.
+2. In DriveDesk, click **Prepare car hotspot** and enter your Mac password. You only do this once.
+3. Open **System Settings > General > Sharing > Internet Sharing**. Share from **iPhone USB** to **Wi-Fi**, set a network name and password, and turn it on. If it was already on, turn it off and on again.
+4. On the car, connect to that Wi-Fi network.
+5. DriveDesk now shows an orange car address, like `http://100-99-0-1.sslip.io`. Type it in the car's browser and enter the PIN.
+
+**Windows**
+1. In DriveDesk, click **Prepare car hotspot** and click **Yes** on the permission prompt. You only do this once.
+2. Open **Settings > Network & internet > Mobile hotspot**, set a network name and password, and turn it on. If it was already on, turn it off and on again.
+3. On the car, connect to that Wi-Fi network.
+4. Type the orange car address from DriveDesk into the car's browser and enter the PIN.
+
+If the car still can't connect, choose the other **Hotspot address range** in DriveDesk, click **Prepare car hotspot** again, and restart the hotspot.
+
+Tip: the car address uses a free public naming service (sslip.io) to turn the hotspot address into a name the car's browser accepts. Your screen video never goes through it; it stays between the laptop and the car.
+
+**Second screen or copy?** Under **Display to stream**, choose **Extend** to use the car as a separate screen (drag windows to it), or **Mirror** to show a copy of your main screen. On a Mac you can also choose which side of your screen the car sits on.
 
 ---
 
@@ -48,6 +64,8 @@ Download the files from the project's **Releases** page. If nobody has made the 
 4. In the car's browser, type the address shown in the app and enter the PIN.
 
 **Optional, control the phone from the car screen:** tap **Turn on touch control** in the app, then turn on **DriveDesk touch control** in Accessibility. If the switch is greyed out (Android 13 and newer): tap **Open App info**, tap the **⋮** menu, choose **Allow restricted settings**, and try again.
+
+Note: Android hotspots also use addresses Tesla blocks, so the phone app may not connect yet. A fix for this is planned.
 
 Good to know: phone audio still plays through the car over Bluetooth. Some apps (banking, Netflix and other streaming apps) block screen sharing and appear black; that's the app's choice and can't be bypassed.
 
@@ -67,7 +85,8 @@ Tip: the iPhone window is small. In DriveDesk, set **Text size** to **Extra larg
 
 ## Something not working?
 
-- **Car shows "Waiting for video" forever:** some hotspots block devices from talking to each other. Try a different hotspot, or share the laptop's own connection as a hotspot and connect the car to that.
+- **Car says it can't connect (ERR_CONNECTION_REFUSED):** the car is using an address it blocks. Follow **Connect the car** above and use the orange car address.
+- **Car shows "Waiting for video" forever:** on a Mac, allow DriveDesk under **System Settings > Privacy & Security > Local Network**. Then click **Reconnect** in the car's toolbar.
 - **"That PIN didn't match":** use the PIN on the device you're connecting to (laptop or phone); they're different.
 - **Text too small:** on Mac pick **Large** text size in DriveDesk; on Windows set the virtual monitor's Scale to 150%.
 - **Work computer:** company-managed laptops may block driver installs, permissions, or firewall changes. Ask your IT team first.

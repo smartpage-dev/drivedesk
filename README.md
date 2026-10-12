@@ -28,6 +28,9 @@ Show your **Mac, Windows PC, or Android phone** on your Tesla's touchscreen (or 
 | `build/` | Installer pieces: Windows firewall rule, macOS ad-hoc signing |
 | `.github/workflows/release.yml` | Builds the `.dmg`, `.exe`, and `.apk` automatically |
 
+## Tesla connection: why a hotspot is needed
+Tesla's browser refuses connections to RFC 1918 private addresses (10.x, 172.16–31.x, 192.168.x), which is what every home router and phone hotspot hands out. DriveDesk therefore has the laptop run the hotspot (macOS Internet Sharing / Windows Mobile Hotspot) on a range outside RFC 1918 (`100.99.0.x` by default, `198.18.0.x` as an alternative), and gives the car a hostname for it through sslip.io (`100-99-0-1.sslip.io` resolves to `100.99.0.1`). Setup code is in `src/carnet.js`. SideDisplay documents the same underlying restriction and the same hotspot-based approach.
+
 ## Design choices
 - **Local only, PIN protected.** 6-digit PIN, lockout after 5 wrong attempts. The car remembers the PIN.
 - **Readable from the driver's seat.** Text is enlarged by the OS (macOS HiDPI modes / Windows scaling), so it stays sharp.
@@ -61,6 +64,8 @@ gradle assembleDebug       # -> app/build/outputs/apk/debug/app-debug.apk
 - **Verified here:** all JavaScript passes syntax checks. The car-side **fMP4 muxer** (`android/app/src/main/assets/web/phone.js`) was tested end-to-end: a real H.264 stream was muxed and decoded by ffmpeg with all 90 frames pixel-identical to the source.
 - **Not run anywhere yet:** the Electron app, the Swift helper, the Kotlin app (no Android SDK or Kotlin compiler was available to compile it), the GitHub workflow, and anything on a real Tesla.
 - **Highest-risk items to test first:**
+  - Whether the car accepts the `100.99.0.x` hotspot range and sslip.io hostnames (the alternative range is selectable in the UI), and whether the macOS `com.apple.nat` keys and the Windows `ScopeAddress` registry value still change the hotspot range on current OS versions.
+  - The Android app: phone hotspots use private addresses, so it is expected to hit the same Tesla block until it gets its own workaround.
   - macOS `CGVirtualDisplay` is undocumented; header and HiDPI behaviour are reconstructed from open-source projects.
   - Android encoder behaviour varies by phone maker; the app retries smaller sizes and simpler settings if the first configuration fails.
   - Tesla browser MSE/WebRTC playback varies by car computer and software version.

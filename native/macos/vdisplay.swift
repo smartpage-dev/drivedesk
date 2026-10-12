@@ -18,6 +18,7 @@ let width  = Int(argValue("--width") ?? "") ?? 2200
 let height = Int(argValue("--height") ?? "") ?? 1300
 let scale  = max(1.0, Double(argValue("--scale") ?? "") ?? 1.5)
 let name   = argValue("--name") ?? "DriveDesk Display"
+let position = argValue("--position") ?? "right"   // right | left | above | below | manual
 
 // Assume ~150 ppi (Tesla 17" 2200x1300 is ~150 ppi). Affects macOS's default UI sizing.
 let ppi = 150.0
@@ -60,8 +61,32 @@ guard display.apply(settings) else {
     exit(1)
 }
 
+/// Puts the car screen next to the main screen, so moving the mouse off that edge goes to the car.
+/// Uses public CoreGraphics display-configuration APIs. "manual" keeps whatever System Settings has.
+func place(_ id: CGDirectDisplayID, _ where_: String) {
+    if where_ == "manual" { return }
+    let main = CGDisplayBounds(CGMainDisplayID())
+    let me = CGDisplayBounds(id)
+    var x = main.maxX, y = main.minY
+    switch where_ {
+    case "left":  x = main.minX - me.width; y = main.minY
+    case "above": x = main.minX + (main.width - me.width) / 2; y = main.minY - me.height
+    case "below": x = main.minX + (main.width - me.width) / 2; y = main.maxY
+    default:      x = main.maxX; y = main.minY
+    }
+    var config: CGDisplayConfigRef?
+    guard CGBeginDisplayConfiguration(&config) == .success, let cfg = config else { return }
+    CGConfigureDisplayOrigin(cfg, id, Int32(x.rounded()), Int32(y.rounded()))
+    if CGCompleteDisplayConfiguration(cfg, .forSession) != .success {
+        FileHandle.standardError.write("Could not arrange display\n".data(using: .utf8)!)
+    }
+}
+
 print("READY \(display.displayID)")
 fflush(stdout)
+
+// macOS needs a moment to register the new display before it can be moved.
+DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { place(display.displayID, position) }
 
 // Exit cleanly on SIGTERM/SIGINT; the display disappears with the process.
 signal(SIGTERM) { _ in exit(0) }

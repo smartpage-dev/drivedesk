@@ -1,7 +1,7 @@
 {
   "name": "drivedesk",
   "productName": "DriveDesk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Use a Tesla (or any browser) screen as a wireless extended display for macOS and Windows. Local network only.",
   "main": "src/main.js",
   "license": "MIT",
@@ -42,7 +42,10 @@
           "from": "native/macos/build/vdisplay",
           "to": "vdisplay"
         }
-      ]
+      ],
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "DriveDesk streams your screen to your car or tablet over the local network."
+      }
     },
     "dmg": {
       "title": "DriveDesk",

@@ -45,6 +45,10 @@
   .check .detail { color: var(--muted); font-size: 12px; }
   #setup { background: var(--panel); border-radius: 10px; padding: 6px 16px; margin-bottom: 20px; border-top: 0; }
   #setup h2 { margin-top: 10px; }
+  ol.steps { margin: 8px 0 14px; padding-left: 20px; }
+  ol.steps li { margin-bottom: 6px; }
+  .url.blocked { color: var(--muted); text-decoration: line-through; font-size: 15px; }
+  .car-url { font-size: 22px; font-weight: 600; color: var(--amber); user-select: all; }
 </style>
 </head>
 <body>
@@ -59,7 +63,7 @@
   <section class="connect">
     <div>
       <div id="urls"></div>
-      <p class="hint">Open this address in the car's browser while parked. Both devices must be on the same Wi-Fi or hotspot.</p>
+      <p class="hint" id="url-hint">Open this address in the car's browser while parked.</p>
     </div>
     <div>
       <div class="pin" id="pin">------</div>
@@ -67,8 +71,50 @@
     </div>
   </section>
 
+  <section id="car-net" hidden>
+    <h2>Connect your Tesla</h2>
+    <p class="warn" style="margin-top:0">Tesla's browser blocks home-network addresses like <span id="blocked-ip">192.168.x.x</span>, so it can't open this computer over normal Wi-Fi. Let the car join a hotspot from this computer instead:</p>
+    <ol class="steps" id="steps-mac" hidden>
+      <li>Connect your iPhone with a USB cable and turn on its Personal Hotspot, so the Mac gets internet over USB. (Ethernet works too.)</li>
+      <li>Click <b>Prepare car hotspot</b> below and enter your Mac password. This changes the hotspot to an address range the car accepts.</li>
+      <li>In <b>System Settings &gt; General &gt; Sharing &gt; Internet Sharing</b>: share from <b>iPhone USB</b> to <b>Wi-Fi</b>, set a network name and password, then turn it on. If it was already on, turn it off and on again.</li>
+      <li>On the car, connect to that Wi-Fi network, then open the car address that appears above.</li>
+    </ol>
+    <ol class="steps" id="steps-win" hidden>
+      <li>Click <b>Prepare car hotspot</b> below and click <b>Yes</b> on the permission prompt. This changes the hotspot to an address range the car accepts.</li>
+      <li>In <b>Settings &gt; Network &amp; internet &gt; Mobile hotspot</b>, set a network name and password, then turn it on. If it was already on, turn it off and on again.</li>
+      <li>On the car, connect to that Wi-Fi network, then open the car address that appears above.</li>
+    </ol>
+    <div class="row">
+      <label class="field">Hotspot address range
+        <select id="car-range"></select>
+      </label>
+      <button class="primary" id="car-prepare">Prepare car hotspot</button>
+      <button id="open-sharing">Open hotspot settings</button>
+    </div>
+    <p class="hint" id="car-status"></p>
+  </section>
+
   <section>
     <h2>Display to stream</h2>
+    <div class="row" style="margin-bottom:12px">
+      <label class="field">The car screen should
+        <select id="mode">
+          <option value="extend">Extend: be a second screen</option>
+          <option value="mirror">Mirror: copy my main screen</option>
+        </select>
+      </label>
+      <label class="field" id="position-field">Car screen position
+        <select id="position">
+          <option value="right">Right of my screen</option>
+          <option value="left">Left of my screen</option>
+          <option value="above">Above my screen</option>
+          <option value="below">Below my screen</option>
+          <option value="manual">Keep my arrangement in System Settings</option>
+        </select>
+      </label>
+    </div>
+    <p class="hint" id="mode-hint" style="margin-top:0"></p>
     <div id="displays"></div>
     <div id="vd-mac" hidden>
       <div class="row" style="margin-top:12px">
@@ -114,6 +160,14 @@
       </label>
     </div>
     <p class="hint">Changes apply to the next connection. H.264 is usually decoded in hardware by the car.</p>
+    <div class="row" style="margin-top:14px">
+      <label class="field">Port
+        <input type="number" id="port" min="80" max="65535" placeholder="Auto" style="width:110px">
+      </label>
+      <button id="port-apply">Apply port</button>
+      <span class="hint" id="port-status" style="margin:0"></span>
+    </div>
+    <p class="hint">Leave empty for automatic (80, or 8787 if 80 is taken). Use 80 or 1024–65535. Changing it reconnects the car.</p>
     <label class="row" style="margin-top:12px;color:var(--text)"><input type="checkbox" id="login" style="accent-color:var(--amber)"> Open DriveDesk when I log in</label>
   </section>
 

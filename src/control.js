@@ -126,9 +126,44 @@ function render(s) {
     </div>`).join('');
   document.querySelectorAll('[data-fix]').forEach((b) => { b.onclick = () => host.fixSetup(b.dataset.fix); });
   $('login').checked = !!s.launchAtLogin;
-  $('urls').innerHTML = s.urls.length
-    ? s.urls.map((u) => `<div class="url" title="${u.name}">${u.url}</div>`).join('')
-    : '<div class="warn">No network connection. Join a Wi-Fi network or hotspot.</div>';
+  // Car address first: only addresses outside 192.168/10/172.16 work in Tesla's browser.
+  const carOk = s.urls.filter((u) => u.carReachable);
+  const blocked = s.urls.filter((u) => !u.carReachable);
+  if (s.port === null) {
+    $('urls').innerHTML = '<div class="warn">The server isn\'t running: the port is in use. Pick another port under Quality.</div>';
+  } else if (carOk.length) {
+    $('urls').innerHTML = carOk.map((u) => `<div class="car-url" title="${escapeHtml(u.name)}: ${u.ip}">${u.carUrl}</div>`).join('') +
+      blocked.map((u) => `<div class="url" style="font-size:14px;color:var(--muted)" title="${escapeHtml(u.name)}">${u.url} (phones and laptops)</div>`).join('');
+    $('url-hint').textContent = "Type the orange address in the car's browser while parked. The others work for phones, tablets, and laptops.";
+  } else if (blocked.length) {
+    $('urls').innerHTML = blocked.map((u) => `<div class="url" title="${escapeHtml(u.name)}">${u.url}</div>`).join('');
+    $('url-hint').textContent = "This address works for phones, tablets, and laptops. For a Tesla, set up the car hotspot below.";
+  } else {
+    $('urls').innerHTML = '<div class="warn">No network connection. Join a Wi-Fi network or hotspot.</div>';
+  }
+  $('car-net').hidden = carOk.length > 0;
+  $('steps-mac').hidden = s.platform !== 'darwin';
+  $('steps-win').hidden = s.platform !== 'win32';
+  if (blocked[0]) $('blocked-ip').textContent = blocked[0].ip;
+  if (!$('car-range').options.length) {
+    $('car-range').innerHTML = Object.entries(s.carRanges).map(([v, label]) => `<option value="${v}">${escapeHtml(label)}</option>`).join('');
+  }
+  $('car-range').value = s.settings.carRange;
+
+  // Extend / mirror
+  $('mode').value = s.settings.mode || 'extend';
+  $('position').value = (s.settings.vd && s.settings.vd.position) || 'right';
+  $('position-field').hidden = s.platform !== 'darwin' || $('mode').value === 'mirror';
+  $('mode-hint').textContent = $('mode').value === 'mirror'
+    ? 'The car shows exactly what is on your main screen.'
+    : (s.platform === 'darwin'
+        ? 'The car is its own screen: drag windows past the edge of your screen to move them to the car.'
+        : 'Needs a virtual monitor driver (see the setup list). Without one, the car mirrors your main screen.');
+
+  // Port
+  if (document.activeElement !== $('port')) $('port').value = s.settings.port || '';
+  $('port').disabled = $('port-apply').disabled = !!s.portFromEnv;
+  $('port-status').textContent = s.port ? `Running on port ${s.port}` : '';
   $('pin').textContent = s.pin;
 
   $('displays').innerHTML = s.displays.map((d) => {
@@ -187,6 +222,28 @@ $('vd-create').onclick = async () => {
 };
 $('vd-remove').onclick = () => host.removeVirtualDisplay();
 $('login').onchange = (e) => host.setLaunchAtLogin(e.target.checked);
+
+$('port-apply').onclick = async () => {
+  $('port-status').textContent = 'Restarting…';
+  const r = await host.setPort($('port').value.trim());
+  $('port-status').innerHTML = r.ok ? `Running on port ${r.port}` : `<span class="warn">${escapeHtml(r.error)}</span>`;
+};
+
+$('car-prepare').onclick = async () => {
+  $('car-status').textContent = 'Waiting for your password…';
+  const r = await host.carPrepare($('car-range').value);
+  $('car-status').innerHTML = r.ok
+    ? `<span class="ok">Done.</span> ${escapeHtml(r.next)} The orange car address appears at the top once the hotspot is on.`
+    : `<span class="warn">${escapeHtml(r.error || 'Failed')}</span>`;
+};
+$('open-sharing').onclick = () => host.openSharing();
+
+async function applyMode() {
+  $('mode-hint').textContent = 'Updating…';
+  await host.setMode({ mode: $('mode').value, position: $('position').value });
+}
+$('mode').onchange = applyMode;
+$('position').onchange = applyMode;
 
 host.onState(render);
 host.getState().then(render);

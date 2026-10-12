@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const input = require('./input');
 const vdisplay = require('./vdisplay');
+const carnet = require('./carnet');
 
 // Expose real LAN IPs in ICE candidates. Chromium hides them behind mDNS names by default,
 // and the Tesla browser can't always resolve those on a phone hotspot.
@@ -26,8 +27,12 @@ app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 
-// Try port 80 first so the car only needs "http://192.168.x.x"; fall back to 8787.
-const PORTS = process.env.DRIVEDESK_PORT ? [Number(process.env.DRIVEDESK_PORT)] : [80, 8787];
+// Port: env var > setting in the UI > automatic (80 so the address needs no ":port", else 8787).
+function portList() {
+  if (process.env.DRIVEDESK_PORT) return [Number(process.env.DRIVEDESK_PORT)];
+  if (config.port) return [config.port];
+  return [80, 8787];
+}
 let PORT = null;
 const VIEWER_DIR = path.join(__dirname, 'viewer');
 const MAX_SESSIONS = 3;
@@ -41,7 +46,10 @@ const defaults = {
   bitrateMbps: 12,
   codec: 'H264',          // H264 | VP9 | VP8 | AV1  (negotiation falls back automatically)
   scrollSpeed: 1.0,
-  vd: { width: 2200, height: 1300, scale: 1.5 } // Model S/X 2021+ default
+  vd: { width: 2200, height: 1300, scale: 1.5, position: 'right' }, // Model S/X 2021+ default
+  port: null,            // null = automatic
+  mode: 'extend',        // 'extend' (car is a second screen) | 'mirror' (car copies the main screen)
+  carRange: '100.99.0.1' // hotspot range outside RFC 1918, which Tesla's browser blocks
 };
 let config = { ...defaults };
 
@@ -65,7 +73,7 @@ function lanUrls() {
   const out = [];
   for (const [name, addrs] of Object.entries(os.networkInterfaces())) {
     for (const a of addrs || []) {
-      if (a.family === 'IPv4' && !a.internal) out.push({ name, url: PORT === 80 ? `http://${a.address}` : `http://${a.address}:${PORT}` });
+      if (a.family === 'IPv4' && !a.internal) out.push({ name, ...carnet.describe(a.address, PORT) });
     }
   }
   return out;
@@ -101,7 +109,9 @@ function publicState() {
     port: PORT,
     urls: lanUrls(),
     pin: config.pin,
-    settings: { defaultDisplayId: config.defaultDisplayId, fps: config.fps, bitrateMbps: config.bitrateMbps, codec: config.codec, scrollSpeed: config.scrollSpeed, vd: config.vd },
+    settings: { defaultDisplayId: config.defaultDisplayId, fps: config.fps, bitrateMbps: config.bitrateMbps, codec: config.codec, scrollSpeed: config.scrollSpeed, vd: config.vd, port: config.port, mode: config.mode, carRange: config.carRange },
+    carRanges: carnet.RANGES,
+    portFromEnv: !!process.env.DRIVEDESK_PORT,
     displays: displayList(),
     sessions: [...sessions.entries()].map(([id, s]) => ({ id, ip: s.ip, displayId: s.displayId, viewport: s.viewport, stats: s.stats || null })),
     vd: vdisplay.status(),
@@ -126,7 +136,9 @@ function setupChecks() {
     const hasVirtual = displayList().some((d) => d.virtualGuess || (!d.primary && !d.internal));
     items.push({ id: 'driver', ok: hasVirtual, title: 'Virtual monitor (optional)', fix: 'Get driver', detail: 'Without it, the car mirrors your main screen. With it, the car becomes a second screen.' });
   }
-  items.push({ id: 'network', ok: lanUrls().length > 0, title: 'Network connection', fix: null, detail: 'Join the same Wi-Fi or hotspot as the car.' });
+  const urls = lanUrls();
+  items.push({ id: 'network', ok: urls.some((u) => u.carReachable), title: 'Car-compatible network', fix: null,
+    detail: urls.length ? 'Tesla blocks home-network addresses like 192.168.x.x. Set up the car hotspot below.' : 'Not connected to any network.' });
   return items;
 }
 
@@ -148,6 +160,42 @@ ipcMain.handle('fix-setup', async (_e, id) => {
   return publicState();
 });
 ipcMain.handle('set-login', (_e, on) => { app.setLoginItemSettings({ openAtLogin: !!on }); return publicState(); });
+
+ipcMain.handle('set-port', async (_e, port) => {
+  const p = port === null || port === '' || Number(port) === 0 ? null : Math.round(Number(port));
+  if (p !== null && (!(p === 80 || (p >= 1024 && p <= 65535)))) return { ok: false, error: 'Use 80, or a number from 1024 to 65535.' };
+  config.port = p; saveConfig();
+  await restartServer();
+  return { ok: PORT !== null, port: PORT, error: PORT === null ? 'That port is in use by another app. Try another.' : null };
+});
+
+ipcMain.handle('car-prepare', async (_e, range) => {
+  if (range && carnet.RANGES[range]) { config.carRange = range; saveConfig(); }
+  const r = await carnet.prepareHotspot(config.carRange);
+  if (r.ok) shell.openExternal(carnet.sharingSettingsUrl());
+  setTimeout(broadcastState, 1000);
+  return r;
+});
+ipcMain.handle('open-sharing', () => shell.openExternal(carnet.sharingSettingsUrl()));
+
+ipcMain.handle('set-mode', async (_e, { mode, position }) => {
+  if (position) config.vd = { ...config.vd, position };
+  if (mode === 'mirror') {
+    config.mode = 'mirror';
+    vdisplay.stop();
+    config.defaultDisplayId = screen.getPrimaryDisplay().id;
+  } else {
+    config.mode = 'extend';
+    if (config.defaultDisplayId === screen.getPrimaryDisplay().id) config.defaultDisplayId = null;
+    if (process.platform === 'darwin') {
+      const r = await vdisplay.start(config.vd);
+      if (r.ok && r.displayId) config.defaultDisplayId = r.displayId;
+    }
+  }
+  saveConfig();
+  setTimeout(broadcastState, 600);
+  return publicState();
+});
 let lastState = '';
 function broadcastState() {
   if (!win || win.isDestroyed()) return;
@@ -343,9 +391,10 @@ ipcMain.handle('set-settings', (_e, patch) => {
 });
 ipcMain.handle('regen-pin', () => { config.pin = newPin(); saveConfig(); broadcastState(); return config.pin; });
 ipcMain.handle('vd-create', async (_e, opts) => {
-  const result = await vdisplay.start(opts || config.vd);
+  const result = await vdisplay.start({ ...config.vd, ...(opts || {}) });
   if (result.ok) {
     config.vd = { ...config.vd, ...(opts || {}) };
+    config.mode = 'extend';
     if (result.displayId) config.defaultDisplayId = result.displayId;
     saveConfig();
   }
@@ -373,15 +422,16 @@ app.whenReady().then(() => {
   listen(0);
   for (const ev of ['display-added', 'display-removed', 'display-metrics-changed']) screen.on(ev, broadcastState);
   // Zero-click setup on macOS: bring back the virtual display from last time.
-  if (process.platform === 'darwin') vdisplay.start(config.vd).then((r) => { if (r.ok && r.displayId) { config.defaultDisplayId = r.displayId; saveConfig(); } broadcastState(); });
+  if (process.platform === 'darwin' && config.mode !== 'mirror') vdisplay.start(config.vd).then((r) => { if (r.ok && r.displayId) { config.defaultDisplayId = r.displayId; saveConfig(); } broadcastState(); });
   setInterval(broadcastState, 3000); // pick up permission / network changes
 });
 
-function listen(i) {
-  const port = PORTS[i];
+function listen(i, done) {
+  const ports = portList();
+  const port = ports[i];
   const onError = (err) => {
-    if (i + 1 < PORTS.length) { console.warn(`port ${port} unavailable (${err.code}), trying ${PORTS[i + 1]}`); listen(i + 1); }
-    else console.error('Could not start server', err);
+    if (i + 1 < ports.length) { console.warn(`port ${port} unavailable (${err.code}), trying ${ports[i + 1]}`); listen(i + 1, done); }
+    else { console.error('Could not start server', err); PORT = null; broadcastState(); if (done) done(); }
   };
   server.once('error', onError);
   server.listen(port, '0.0.0.0', () => {
@@ -389,6 +439,18 @@ function listen(i) {
     server.removeListener('error', onError);
     console.log('DriveDesk listening on', lanUrls().map((u) => u.url).join(', '));
     broadcastState();
+    if (done) done();
+  });
+}
+
+/** Re-binds the server after the port setting changes. Connected screens reconnect automatically. */
+function restartServer() {
+  return new Promise((resolve) => {
+    for (const s of sessions.values()) { try { s.ws.close(); } catch {} }
+    PORT = null;
+    server.close(() => listen(0, resolve));
+    // close() waits for open keep-alive sockets; don't hang forever on them.
+    if (server.closeAllConnections) server.closeAllConnections();
   });
 }
 
