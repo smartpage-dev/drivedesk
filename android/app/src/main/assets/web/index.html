@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>DriveDesk Phone</title>
+<link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+  <div id="pin-screen" class="screen">
+    <div class="pin-box">
+      <p class="pin-title">Enter the PIN shown on your phone</p>
+      <div class="pin-dots" id="pin-dots"></div>
+      <p class="pin-msg" id="pin-msg" role="status"></p>
+      <div class="keypad" id="keypad"></div>
+    </div>
+  </div>
+
+  <div id="stage" class="phone" hidden>
+    <video id="video" autoplay muted playsinline disablepictureinpicture></video>
+    <div id="surface" aria-label="Phone screen"></div>
+    <button id="handle" aria-label="Show controls"></button>
+    <div id="toolbar" hidden>
+      <button data-act="back" class="touch-only">Back</button>
+      <button data-act="home" class="touch-only">Home</button>
+      <button data-act="recents" class="touch-only">Recent apps</button>
+      <button data-act="stats" id="btn-stats">Stats</button>
+      <button data-act="fullscreen">Full screen</button>
+      <button data-act="reconnect">Reconnect</button>
+      <button data-act="forget">Sign out</button>
+    </div>
+    <div id="stats" hidden></div>
+    <div id="hint" hidden>Touch control is off. Turn it on in the DriveDesk app on your phone.</div>
+  </div>
+
+  <div id="status" class="screen" hidden>
+    <p id="status-text">Connecting…</p>
+  </div>
+
+  <script src="phone.js"></script>
+</body>
+</html>

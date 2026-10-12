@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' blob: mediastream:">
+<title>DriveDesk</title>
+<style>
+  :root {
+    --slate: #1c2733; --panel: #243241; --line: #34465a;
+    --text: #e8edf2; --muted: #8a99a8; --amber: #f2a93b; --ok: #6fcf97; --bad: #eb6f6f;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--slate); color: var(--text); font-size: 14px; line-height: 1.5; }
+  main { max-width: 680px; margin: 0 auto; padding: 28px 24px 40px; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 20px; color: var(--muted); }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 10px; }
+  section { border-top: 1px solid var(--line); padding: 20px 0; }
+  .connect { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; border-top: 0; padding-top: 0; }
+  .url { font-size: 22px; font-weight: 600; letter-spacing: .01em; user-select: all; }
+  .url + .url { font-size: 15px; color: var(--muted); font-weight: 500; }
+  .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  .pin { font-size: 44px; font-weight: 700; color: var(--amber); font-variant-numeric: tabular-nums; letter-spacing: .12em; line-height: 1; text-align: right; }
+  .pin-label { color: var(--muted); font-size: 13px; text-align: right; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .display { display: flex; gap: 12px; align-items: center; padding: 10px 12px; background: var(--panel); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; }
+  .display.selected { border-color: var(--amber); }
+  .display input { accent-color: var(--amber); }
+  .display .meta { color: var(--muted); font-size: 12px; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--line); color: var(--text); }
+  label.field { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; }
+  select, input[type=number] { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  button.primary { background: var(--amber); color: #1c2733; border-color: var(--amber); font-weight: 600; }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .session { background: var(--panel); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+  .session .stats { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .warn { color: var(--bad); font-size: 13px; }
+  .ok { color: var(--ok); }
+  .empty { color: var(--muted); }
+  .check { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; }
+  .check + .check { border-top: 1px solid var(--line); }
+  .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); }
+  .dot.ok { background: var(--ok); border-color: var(--ok); }
+  .check .detail { color: var(--muted); font-size: 12px; }
+  #setup { background: var(--panel); border-radius: 10px; padding: 6px 16px; margin-bottom: 20px; border-top: 0; }
+  #setup h2 { margin-top: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>DriveDesk</h1>
+
+  <section id="setup" hidden>
+    <h2>Finish setup</h2>
+    <div id="checks"></div>
+  </section>
+
+  <section class="connect">
+    <div>
+      <div id="urls"></div>
+      <p class="hint">Open this address in the car's browser while parked. Both devices must be on the same Wi-Fi or hotspot.</p>
+    </div>
+    <div>
+      <div class="pin" id="pin">------</div>
+      <div class="pin-label">PIN <button id="regen" style="padding:2px 8px;font-size:12px">New PIN</button></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Display to stream</h2>
+    <div id="displays"></div>
+    <div id="vd-mac" hidden>
+      <div class="row" style="margin-top:12px">
+        <label class="field">Car screen
+          <select id="preset">
+            <option value="1920x1200">Model 3 / Y (1920×1200)</option>
+            <option value="2200x1300">Model S / X 2021+ (2200×1300)</option>
+            <option value="2650x1440">Cybertruck (2650×1440)</option>
+            <option value="1200x1920">Model S / X pre-2021 (portrait) (1200×1920)</option>
+            <option value="viewer">Match connected car browser</option>
+          </select>
+        </label>
+        <label class="field">Text size
+          <select id="scale">
+            <option value="1">Native (smallest)</option>
+            <option value="1.25">Larger</option>
+            <option value="1.5">Large (recommended)</option>
+            <option value="2">Extra large</option>
+          </select>
+        </label>
+        <button class="primary" id="vd-create">Add virtual display</button>
+        <button id="vd-remove">Remove</button>
+      </div>
+      <p class="hint" id="vd-status"></p>
+    </div>
+    <p class="hint" id="vd-win" hidden>On Windows, add a virtual monitor with a virtual display driver (see native/windows/README.md), then set its Scale to 125–150% in Display settings for readable text.</p>
+  </section>
+
+  <section>
+    <h2>Quality</h2>
+    <div class="row">
+      <label class="field">Frame rate
+        <select id="fps"><option>30</option><option>60</option></select>
+      </label>
+      <label class="field">Max bitrate
+        <select id="bitrate"><option value="5">5 Mbps</option><option value="8">8 Mbps</option><option value="12">12 Mbps</option><option value="20">20 Mbps</option><option value="30">30 Mbps</option></select>
+      </label>
+      <label class="field">Preferred codec
+        <select id="codec"><option>H264</option><option>VP9</option><option>VP8</option><option>AV1</option></select>
+      </label>
+      <label class="field">Scroll speed
+        <select id="scroll"><option value="0.5">Slow</option><option value="1">Normal</option><option value="1.6">Fast</option></select>
+      </label>
+    </div>
+    <p class="hint">Changes apply to the next connection. H.264 is usually decoded in hardware by the car.</p>
+    <label class="row" style="margin-top:12px;color:var(--text)"><input type="checkbox" id="login" style="accent-color:var(--amber)"> Open DriveDesk when I log in</label>
+  </section>
+
+  <section>
+    <h2>Connected screens</h2>
+    <div id="sessions"></div>
+    <p class="warn" id="input-error" hidden></p>
+  </section>
+</main>
+<script src="control.js"></script>
+</body>
+</html>

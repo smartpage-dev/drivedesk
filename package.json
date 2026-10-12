@@ -1,0 +1,76 @@
+{
+  "name": "drivedesk",
+  "productName": "DriveDesk",
+  "version": "0.2.0",
+  "description": "Use a Tesla (or any browser) screen as a wireless extended display for macOS and Windows. Local network only.",
+  "main": "src/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:mac-helper": "bash native/macos/build.sh",
+    "dist:mac": "bash native/macos/build.sh --universal && electron-builder --mac --arm64 --x64 --publish never",
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "check": "node --check src/main.js && node --check src/vdisplay.js && node --check src/input/index.js && node --check src/viewer/viewer.js && node --check src/control.js"
+  },
+  "dependencies": {
+    "koffi": "^2.9.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "app.drivedesk.desktop",
+    "productName": "DriveDesk",
+    "artifactName": "DriveDesk-${version}-${os}-${arch}.${ext}",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**"
+    ],
+    "afterPack": "build/adhoc-sign.js",
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity",
+      "extraResources": [
+        {
+          "from": "native/macos/build/vdisplay",
+          "to": "vdisplay"
+        }
+      ]
+    },
+    "dmg": {
+      "title": "DriveDesk",
+      "contents": [
+        {
+          "x": 140,
+          "y": 180,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "createDesktopShortcut": true,
+      "runAfterFinish": true,
+      "include": "build/installer.nsh"
+    }
+  }
+}

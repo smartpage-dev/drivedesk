@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DriveDesk</string>
+    <string name="touch_service_label">DriveDesk touch control</string>
+    <string name="touch_service_description">Lets you tap, swipe, and use Back/Home on this phone from your car screen while DriveDesk is sharing. DriveDesk does not read the content of your screen through this service.</string>
+</resources>

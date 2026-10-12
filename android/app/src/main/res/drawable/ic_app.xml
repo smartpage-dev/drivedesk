@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phone casting to a wide screen -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp"
+    android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#1C2733" android:pathData="M0,0h48v48h-48z"/>
+    <path android:fillColor="#F2A93B" android:pathData="M8,14h26a2,2 0,0 1,2 2v14a2,2 0,0 1,-2 2h-26a2,2 0,0 1,-2 -2v-14a2,2 0,0 1,2 -2z"/>
+    <path android:fillColor="#1C2733" android:pathData="M9,17h24v12h-24z"/>
+    <path android:fillColor="#E8EDF2" android:pathData="M33,20h7a2,2 0,0 1,2 2v16a2,2 0,0 1,-2 2h-7a2,2 0,0 1,-2 -2v-16a2,2 0,0 1,2 -2z"/>
+    <path android:fillColor="#1C2733" android:pathData="M34,23h5v12h-5z"/>
+</vector>
