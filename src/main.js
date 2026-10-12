@@ -182,7 +182,7 @@ ipcMain.handle('set-mode', async (_e, { mode, position }) => {
   if (position) config.vd = { ...config.vd, position };
   if (mode === 'mirror') {
     config.mode = 'mirror';
-    vdisplay.stop();
+    await vdisplay.stop();
     config.defaultDisplayId = screen.getPrimaryDisplay().id;
   } else {
     config.mode = 'extend';

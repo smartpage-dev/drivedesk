@@ -88,6 +88,13 @@ fflush(stdout)
 // macOS needs a moment to register the new display before it can be moved.
 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { place(display.displayID, position) }
 
+// If DriveDesk quits or crashes without stopping us, exit too so the display doesn't linger.
+let parentPID = getppid()
+let watchdog = DispatchSource.makeTimerSource(queue: .main)
+watchdog.schedule(deadline: .now() + 2, repeating: 2)
+watchdog.setEventHandler { if getppid() != parentPID { exit(0) } }
+watchdog.resume()
+
 // Exit cleanly on SIGTERM/SIGINT; the display disappears with the process.
 signal(SIGTERM) { _ in exit(0) }
 signal(SIGINT) { _ in exit(0) }

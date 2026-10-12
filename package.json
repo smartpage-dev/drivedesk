@@ -1,7 +1,7 @@
 {
   "name": "drivedesk",
   "productName": "DriveDesk",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Use a Tesla (or any browser) screen as a wireless extended display for macOS and Windows. Local network only.",
   "main": "src/main.js",
   "license": "MIT",
