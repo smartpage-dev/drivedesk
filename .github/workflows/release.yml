@@ -23,6 +23,14 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: 22 }
       - run: npm install
+      - name: Stop macOS from locking the disk image (known GitHub runner issue)
+        run: |
+          sudo mdutil -a -i off || true          # Spotlight indexing
+          for i in $(seq 1 10); do               # XProtect malware scan
+            sudo pkill -9 XProtect >/dev/null 2>&1 || true
+            pgrep XProtect >/dev/null || break
+            sleep 3
+          done
       - name: Build macOS installers
         # Signing settings are only passed on when the secrets exist; empty values break electron-builder.
         env:
@@ -41,7 +49,15 @@ jobs:
             echo "No signing certificate: building with free ad-hoc signature"
             export CSC_IDENTITY_AUTO_DISCOVERY=false
           fi
-          npm run dist:mac
+          # The .dmg step occasionally fails when macOS keeps the image busy; retry up to 3 times.
+          for attempt in 1 2 3; do
+            if npm run dist:mac; then exit 0; fi
+            echo "Build attempt $attempt failed; cleaning up and retrying"
+            hdiutil detach -force /Volumes/DriveDesk >/dev/null 2>&1 || true
+            sudo pkill -9 XProtect >/dev/null 2>&1 || true
+            sleep 15
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         with: { name: mac, path: dist/*.dmg }
 
