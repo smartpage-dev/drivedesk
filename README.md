@@ -65,7 +65,7 @@ gradle assembleDebug       # -> app/build/outputs/apk/debug/app-debug.apk
 - **Not run anywhere yet:** the Electron app, the Swift helper, the Kotlin app (no Android SDK or Kotlin compiler was available to compile it), the GitHub workflow, and anything on a real Tesla.
 - **Highest-risk items to test first:**
   - Whether the car accepts the `100.99.0.x` hotspot range and sslip.io hostnames (the alternative range is selectable in the UI), and whether the macOS `com.apple.nat` keys and the Windows `ScopeAddress` registry value still change the hotspot range on current OS versions.
-  - The Android app: phone hotspots use private addresses, so it is expected to hit the same Tesla block until it gets its own workaround.
+  - The Android car link (`CarTunnelService.kt`): a local-only VPN adds the virtual address `100.99.9.9` (only route: that /32; only app: DriveDesk) so the car can reach the phone's server through the hotspot. TeslaMirror documents the same virtual-IP + VPN approach. Reply routing to the hotspot while the VPN is active is the main thing to verify on a real phone.
   - macOS `CGVirtualDisplay` is undocumented; header and HiDPI behaviour are reconstructed from open-source projects.
   - Android encoder behaviour varies by phone maker; the app retries smaller sizes and simpler settings if the first configuration fails.
   - Tesla browser MSE/WebRTC playback varies by car computer and software version.

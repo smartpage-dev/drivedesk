@@ -23,6 +23,10 @@ object Prefs {
         return p
     }
 
+    /** Tesla connection (local VPN with a virtual address). On by default; other browsers don't need it. */
+    fun carLink(ctx: Context) = sp(ctx).getBoolean("carLink", true)
+    fun setCarLink(ctx: Context, v: Boolean) = sp(ctx).edit().putBoolean("carLink", v).apply()
+
     fun sharp(ctx: Context) = sp(ctx).getBoolean("sharp", true)
     fun setSharp(ctx: Context, v: Boolean) = sp(ctx).edit().putBoolean("sharp", v).apply()
 }
@@ -41,6 +45,7 @@ object Net {
             for (ni in NetworkInterface.getNetworkInterfaces()) {
                 if (!ni.isUp || ni.isLoopback) continue
                 if (ni.name.startsWith("rmnet") || ni.name.startsWith("ccmni") || ni.name.startsWith("dummy")) continue // mobile data, not reachable
+                if (ni.name.startsWith("tun") || ni.name.startsWith("ppp") || ni.name.startsWith("ipsec")) continue // VPN interfaces (incl. our car link)
                 for (a in ni.inetAddresses) {
                     if (a is Inet4Address && !a.isLoopbackAddress) {
                         out += LanAddress(ni.name, a.hostAddress ?: continue, hotspotNames.containsMatchIn(ni.name))

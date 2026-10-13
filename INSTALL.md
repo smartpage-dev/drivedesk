@@ -58,16 +58,17 @@ Tip: the car address uses a free public naming service (sslip.io) to turn the ho
 
 ## Android phone (no laptop needed)
 
-1. On the phone, download `DriveDesk-Phone-….apk` and open it. If asked, allow your browser to **install unknown apps**.
-2. Open DriveDesk and tap **Start sharing**, then **Start now** on the system prompt.
-3. Turn on the phone's **hotspot**. On the car screen, connect to it under Wi-Fi.
-4. In the car's browser, type the address shown in the app and enter the PIN.
+1. On the phone, download `DriveDesk-Phone-….apk` and open it. If asked, allow your browser to **install unknown apps**. If an older DriveDesk is installed, uninstall it first.
+2. Turn on the phone's **hotspot**. Use **5 GHz**, and if your phone has a **Wi-Fi 6** option for the hotspot, turn it off (Tesla doesn't support Wi-Fi 6 hotspots).
+3. On the car screen, connect to the hotspot under Wi-Fi.
+4. Open DriveDesk and tap **Start sharing**.
+   - The first time, Android asks to allow a **VPN connection**. Tap **OK**. It's local-only: it gives the phone an extra address that Tesla's browser accepts. Nothing goes over the internet through it, and other apps aren't affected.
+   - Then tap **Start now** on the screen-sharing prompt.
+5. In the car's browser, type the orange address shown in the app, `http://100-99-9-9.sslip.io:8787`, and enter the PIN.
 
 **Optional, control the phone from the car screen:** tap **Turn on touch control** in the app, then turn on **DriveDesk touch control** in Accessibility. If the switch is greyed out (Android 13 and newer): tap **Open App info**, tap the **⋮** menu, choose **Allow restricted settings**, and try again.
 
-Note: Android hotspots also use addresses Tesla blocks, so the phone app may not connect yet. A fix for this is planned.
-
-Good to know: phone audio still plays through the car over Bluetooth. Some apps (banking, Netflix and other streaming apps) block screen sharing and appear black; that's the app's choice and can't be bypassed.
+Good to know: while sharing, DriveDesk's VPN replaces any other VPN you use. Phone audio still plays through the car over Bluetooth. Some apps (banking, Netflix and other streaming apps) block screen sharing and appear black; that's the app's choice and can't be bypassed.
 
 ---
 

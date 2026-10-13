@@ -14,8 +14,8 @@ android {
         applicationId = "app.drivedesk.phone"
         minSdk = 26          // Android 8.0+
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.2.0"
+        versionCode = 2
+        versionName = "0.3.0"
     }
 
     signingConfigs {

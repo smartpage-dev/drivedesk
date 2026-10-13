@@ -28,6 +28,16 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
+        <!-- Local-only VPN that gives the phone an address the Tesla browser accepts. -->
+        <service
+            android:name=".CarTunnelService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+
         <!-- Optional: lets taps on the car screen control the phone (Accessibility gestures). -->
         <service
             android:name=".TouchService"

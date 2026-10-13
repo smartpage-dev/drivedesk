@@ -9,6 +9,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -31,6 +32,7 @@ class MainActivity : Activity() {
 
     private lateinit var status: TextView
     private lateinit var address: TextView
+    private lateinit var otherAddress: TextView
     private lateinit var pin: TextView
     private lateinit var startBtn: Button
     private lateinit var touchStatus: TextView
@@ -50,7 +52,8 @@ class MainActivity : Activity() {
 
         root.addView(label("DriveDesk", 15f, muted))
         status = label("", 22f, fg, bold = true).also { it.setPadding(0, dp(8), 0, dp(4)); root.addView(it) }
-        address = label("", 26f, fg, bold = true).also { it.setTextIsSelectable(true); root.addView(it) }
+        address = label("", 24f, amber, bold = true).also { it.setTextIsSelectable(true); root.addView(it) }
+        otherAddress = label("", 13f, muted).also { it.setPadding(0, dp(4), 0, 0); root.addView(it) }
         root.addView(label("PIN", 13f, muted).also { it.setPadding(0, dp(18), 0, 0) })
         pin = label("", 44f, amber, bold = true).also { it.letterSpacing = 0.12f; root.addView(it) }
 
@@ -59,10 +62,10 @@ class MainActivity : Activity() {
 
         root.addView(section("How to connect"))
         root.addView(label(
-            "1. Turn on this phone's hotspot (Settings > Hotspot).\n" +
+            "1. Turn on this phone's hotspot (Settings > Hotspot). Use 5 GHz, and turn off Wi-Fi 6 if your phone has that option.\n" +
             "2. On the car screen, connect to that hotspot under Wi-Fi.\n" +
-            "3. Park, open the car's browser, and type the address above.\n" +
-            "4. Enter the PIN. Phone audio plays through the car over Bluetooth as usual.",
+            "3. Tap Start sharing here. The first time, allow the VPN request: it's local-only and lets the car reach this phone.\n" +
+            "4. Park, open the car's browser, type the orange address above, and enter the PIN.",
             15f, fg).also { it.setLineSpacing(0f, 1.35f) })
 
         root.addView(section("Touch control"))
@@ -77,6 +80,19 @@ class MainActivity : Activity() {
                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
             }, lp(top = 8))
         }
+
+        root.addView(section("Tesla connection"))
+        root.addView(Switch(this).apply {
+            this.text = "Use the Tesla connection (local VPN)"
+            setTextColor(fg); textSize = 15f
+            isChecked = Prefs.carLink(this@MainActivity)
+            setOnCheckedChangeListener { _, v -> Prefs.setCarLink(this@MainActivity, v) }
+        })
+        root.addView(label(
+            "Tesla's browser blocks normal hotspot addresses. This gives the phone an extra address the car accepts. " +
+            "No traffic leaves the phone through it and other apps aren't affected. Turn it off only for non-Tesla screens. " +
+            "It replaces any other VPN while sharing.",
+            13f, muted).also { it.setPadding(0, dp(6), 0, 0) })
 
         root.addView(section("Quality"))
         root.addView(Switch(this).apply {
@@ -107,8 +123,19 @@ class MainActivity : Activity() {
             MirrorService.viewers > 0 -> "Sharing to ${MirrorService.viewers} screen" + (if (MirrorService.viewers > 1) "s" else "")
             else -> "Sharing. Open this in the car's browser:"
         }
-        address.text = if (addrs.isEmpty()) "Turn on your hotspot to get an address" else addrs.joinToString("\n") { it.url }
-        address.textSize = if (addrs.isEmpty()) 18f else 26f
+        if (running && CarTunnelService.active) {
+            address.text = CarTunnelService.carUrl
+            address.textSize = 22f
+            otherAddress.text = if (addrs.isEmpty()) "" else "Phones, tablets, laptops: " + addrs.joinToString("  ") { it.url }
+        } else {
+            address.text = when {
+                addrs.isEmpty() -> "Turn on your hotspot to get an address"
+                running -> addrs.joinToString("\n") { it.url }
+                else -> "Tap Start sharing to get the car address"
+            }
+            address.textSize = 18f
+            otherAddress.text = if (running && Prefs.carLink(this)) "Tesla connection is off or was not allowed, so a Tesla can't open this address." else ""
+        }
         pin.text = Prefs.pin(this)
         startBtn.text = if (running) "Stop sharing" else "Start sharing"
 
@@ -124,6 +151,18 @@ class MainActivity : Activity() {
             ui.postDelayed({ refresh() }, 300)
             return
         }
+        if (Prefs.carLink(this)) {
+            val consent = VpnService.prepare(this)
+            if (consent != null) { askVpn(consent); return }
+            startService(Intent(this, CarTunnelService::class.java))
+        }
+        requestCapture()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun askVpn(consent: Intent) = startActivityForResult(consent, 3)
+
+    private fun requestCapture() {
         val mpm = getSystemService(MediaProjectionManager::class.java)!!
         @Suppress("DEPRECATION")
         startActivityForResult(mpm.createScreenCaptureIntent(), 1)
@@ -133,7 +172,16 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != 1 || resultCode != RESULT_OK || data == null) return
+        if (requestCode == 3) {
+            // VPN consent: continue to screen capture either way; without it only non-Tesla screens can connect.
+            if (resultCode == RESULT_OK) startService(Intent(this, CarTunnelService::class.java))
+            requestCapture()
+            return
+        }
+        if (requestCode != 1 || resultCode != RESULT_OK || data == null) {
+            if (!MirrorService.running) CarTunnelService.shutdown()
+            return
+        }
         startForegroundService(Intent(this, MirrorService::class.java)
             .putExtra(MirrorService.EXTRA_CODE, resultCode)
             .putExtra(MirrorService.EXTRA_DATA, data))

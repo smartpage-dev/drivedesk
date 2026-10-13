@@ -150,7 +150,7 @@ class MirrorService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val open = PendingIntent.getActivity(this, 2, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val addr = Net.addresses().firstOrNull()?.url ?: "Turn on your hotspot"
+        val addr = if (CarTunnelService.active) CarTunnelService.carUrl else (Net.addresses().firstOrNull()?.url ?: "Turn on your hotspot")
         val n = Notification.Builder(this, "mirror")
             .setSmallIcon(R.drawable.ic_stat)
             .setContentTitle("Sharing screen to your car")
@@ -172,6 +172,7 @@ class MirrorService : Service() {
         encoder?.stop()
         virtualDisplay?.release()
         projection?.stop()
+        CarTunnelService.shutdown()
         try { wakeLock?.release() } catch (_: Exception) { }
         thread.quitSafely()
         super.onDestroy()
