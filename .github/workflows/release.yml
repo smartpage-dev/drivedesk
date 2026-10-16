@@ -49,17 +49,14 @@ jobs:
             echo "No signing certificate: building with free ad-hoc signature"
             export CSC_IDENTITY_AUTO_DISCOVERY=false
           fi
-          # The .dmg step occasionally fails when macOS keeps the image busy; retry up to 3 times.
-          for attempt in 1 2 3; do
-            if npm run dist:mac; then exit 0; fi
-            echo "Build attempt $attempt failed; cleaning up and retrying"
-            hdiutil detach -force /Volumes/DriveDesk >/dev/null 2>&1 || true
-            sudo pkill -9 XProtect >/dev/null 2>&1 || true
-            sleep 15
-          done
-          exit 1
+          # Makes .zip files (always) and .dmg files (retried separately; see build/make-dmg.sh).
+          npm run dist:mac
       - uses: actions/upload-artifact@v4
-        with: { name: mac, path: dist/*.dmg }
+        with:
+          name: mac
+          path: |
+            dist/*.dmg
+            dist/*-mac-*.zip
 
   windows:
     runs-on: windows-latest
@@ -124,8 +121,8 @@ jobs:
           files: out/*
           body: |
             **Download the one for your device:**
-            - Mac with Apple chip (M1 or newer): `DriveDesk-…-mac-arm64.dmg`
-            - Mac with Intel chip: `DriveDesk-…-mac-x64.dmg`
+            - Mac with Apple chip (M1 or newer): `DriveDesk-…-mac-arm64.dmg` (or `.zip`)
+            - Mac with Intel chip: `DriveDesk-…-mac-x64.dmg` (or `.zip`)
             - Windows: `DriveDesk-…-win-x64.exe`
             - Android phone: `DriveDesk-Phone-….apk`
             Setup steps: see INSTALL.md.
