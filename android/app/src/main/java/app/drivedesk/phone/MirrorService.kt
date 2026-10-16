@@ -145,19 +145,19 @@ class MirrorService : Service() {
 
     private fun startForegroundCompat() {
         val nm = getSystemService(NotificationManager::class.java)!!
-        nm.createNotificationChannel(NotificationChannel("mirror", "Screen sharing", NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(NotificationChannel("mirror", tr("Screen sharing", "螢幕分享"), NotificationManager.IMPORTANCE_LOW))
         val stop = PendingIntent.getService(this, 1, Intent(this, MirrorService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val open = PendingIntent.getActivity(this, 2, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val addr = if (CarTunnelService.active) CarTunnelService.carUrl else (Net.addresses().firstOrNull()?.url ?: "Turn on your hotspot")
+        val addr = Net.carUrl() ?: Net.addresses().firstOrNull()?.url ?: tr("Turn on your hotspot", "請開啟熱點")
         val n = Notification.Builder(this, "mirror")
             .setSmallIcon(R.drawable.ic_stat)
-            .setContentTitle("Sharing screen to your car")
-            .setContentText("$addr  PIN ${Prefs.pin(this)}")
+            .setContentTitle(tr("Sharing screen to your car", "正在分享螢幕到汽車"))
+            .setContentText("$addr  " + tr("PIN", "PIN 碼") + " ${Prefs.pin(this)}")
             .setContentIntent(open)
             .setOngoing(true)
-            .addAction(Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_stat), "Stop", stop).build())
+            .addAction(Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_stat), tr("Stop", "停止"), stop).build())
             .build()
         if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
         else startForeground(1, n)

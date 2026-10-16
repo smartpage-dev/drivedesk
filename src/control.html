@@ -53,64 +53,73 @@
 </head>
 <body>
 <main>
-  <h1>DriveDesk</h1>
+  <div class="row" style="justify-content:space-between;margin-bottom:20px">
+    <h1 style="margin:0">DriveDesk</h1>
+    <label class="row" style="color:var(--muted);font-size:12px;gap:6px">Language / 語言
+      <select id="lang">
+        <option value="auto">Auto 自動</option>
+        <option value="en">English</option>
+        <option value="zh">中文</option>
+      </select>
+    </label>
+  </div>
 
   <section id="setup" hidden>
-    <h2>Finish setup</h2>
+    <h2 data-zh="完成設定">Finish setup</h2>
     <div id="checks"></div>
   </section>
 
   <section class="connect">
     <div>
       <div id="urls"></div>
-      <p class="hint" id="url-hint">Open this address in the car's browser while parked.</p>
+      <p class="hint" id="url-hint"></p>
     </div>
     <div>
       <div class="pin" id="pin">------</div>
-      <div class="pin-label">PIN <button id="regen" style="padding:2px 8px;font-size:12px">New PIN</button></div>
+      <div class="pin-label"><span data-zh="PIN 碼">PIN</span> <button id="regen" style="padding:2px 8px;font-size:12px" data-zh="更換 PIN 碼">New PIN</button></div>
     </div>
   </section>
 
   <section id="car-net" hidden>
-    <h2>Connect your Tesla</h2>
-    <p class="warn" style="margin-top:0">Tesla's browser blocks home-network addresses like <span id="blocked-ip">192.168.x.x</span>, so it can't open this computer over normal Wi-Fi. Let the car join a hotspot from this computer instead:</p>
+    <h2 data-zh="連接你的 Tesla">Connect your Tesla</h2>
+    <p class="warn" style="margin-top:0" data-zh='Tesla 瀏覽器會封鎖 <span id="blocked-ip">192.168.x.x</span> 這類家用網絡地址，所以在一般 Wi-Fi 下無法開啟這部電腦。請改為讓汽車連接這部電腦開設的熱點：'>Tesla's browser blocks home-network addresses like <span id="blocked-ip">192.168.x.x</span>, so it can't open this computer over normal Wi-Fi. Let the car join a hotspot from this computer instead:</p>
     <ol class="steps" id="steps-mac" hidden>
-      <li>Connect your iPhone with a USB cable and turn on its Personal Hotspot, so the Mac gets internet over USB. (Ethernet works too.)</li>
-      <li>Click <b>Prepare car hotspot</b> below and enter your Mac password. This changes the hotspot to an address range the car accepts.</li>
-      <li>In <b>System Settings &gt; General &gt; Sharing &gt; Internet Sharing</b>: share from <b>iPhone USB</b> to <b>Wi-Fi</b>, set a network name and password, then turn it on. If it was already on, turn it off and on again.</li>
-      <li>On the car, connect to that Wi-Fi network, then open the car address that appears above.</li>
+      <li data-zh="用 USB 線連接 iPhone 並開啟「個人熱點」，讓 Mac 經 USB 上網（亦可用有線網絡）。">Connect your iPhone with a USB cable and turn on its Personal Hotspot, so the Mac gets internet over USB. (Ethernet works too.)</li>
+      <li data-zh="按下面的<b>準備車用熱點</b>，然後輸入 Mac 密碼。這會把熱點改用汽車接受的地址範圍。">Click <b>Prepare car hotspot</b> below and enter your Mac password. This changes the hotspot to an address range the car accepts.</li>
+      <li data-zh="在<b>系統設定 &gt; 一般 &gt; 共享 &gt; 互聯網共享（Internet Sharing）</b>：由 <b>iPhone USB</b> 共享到 <b>Wi-Fi</b>，設定網絡名稱及密碼，然後開啟。如果本身已開啟，請先關閉再重新開啟。">In <b>System Settings &gt; General &gt; Sharing &gt; Internet Sharing</b>: share from <b>iPhone USB</b> to <b>Wi-Fi</b>, set a network name and password, then turn it on. If it was already on, turn it off and on again.</li>
+      <li data-zh="在汽車上連接該 Wi-Fi 網絡，然後開啟上方顯示的車用地址。">On the car, connect to that Wi-Fi network, then open the car address that appears above.</li>
     </ol>
     <ol class="steps" id="steps-win" hidden>
-      <li>Click <b>Prepare car hotspot</b> below and click <b>Yes</b> on the permission prompt. This changes the hotspot to an address range the car accepts.</li>
-      <li>In <b>Settings &gt; Network &amp; internet &gt; Mobile hotspot</b>, set a network name and password, then turn it on. If it was already on, turn it off and on again.</li>
-      <li>On the car, connect to that Wi-Fi network, then open the car address that appears above.</li>
+      <li data-zh="按下面的<b>準備車用熱點</b>，並在權限提示按<b>是</b>。這會把熱點改用汽車接受的地址範圍。">Click <b>Prepare car hotspot</b> below and click <b>Yes</b> on the permission prompt. This changes the hotspot to an address range the car accepts.</li>
+      <li data-zh="在<b>設定 &gt; 網絡和互聯網 &gt; 流動熱點（Mobile hotspot）</b>設定網絡名稱及密碼，然後開啟。如果本身已開啟，請先關閉再重新開啟。">In <b>Settings &gt; Network &amp; internet &gt; Mobile hotspot</b>, set a network name and password, then turn it on. If it was already on, turn it off and on again.</li>
+      <li data-zh="在汽車上連接該 Wi-Fi 網絡，然後開啟上方顯示的車用地址。">On the car, connect to that Wi-Fi network, then open the car address that appears above.</li>
     </ol>
     <div class="row">
-      <label class="field">Hotspot address range
+      <label class="field"><span data-zh="熱點地址範圍">Hotspot address range</span>
         <select id="car-range"></select>
       </label>
-      <button class="primary" id="car-prepare">Prepare car hotspot</button>
-      <button id="open-sharing">Open hotspot settings</button>
+      <button class="primary" id="car-prepare" data-zh="準備車用熱點">Prepare car hotspot</button>
+      <button id="open-sharing" data-zh="開啟熱點設定">Open hotspot settings</button>
     </div>
     <p class="hint" id="car-status"></p>
   </section>
 
   <section>
-    <h2>Display to stream</h2>
+    <h2 data-zh="串流的顯示器">Display to stream</h2>
     <div class="row" style="margin-bottom:12px">
-      <label class="field">The car screen should
+      <label class="field"><span data-zh="汽車螢幕用途">The car screen should</span>
         <select id="mode">
-          <option value="extend">Extend: be a second screen</option>
-          <option value="mirror">Mirror: copy my main screen</option>
+          <option value="extend" data-zh="延伸：作為第二個螢幕">Extend: be a second screen</option>
+          <option value="mirror" data-zh="鏡像：顯示與主螢幕相同的畫面">Mirror: copy my main screen</option>
         </select>
       </label>
-      <label class="field" id="position-field">Car screen position
+      <label class="field" id="position-field"><span data-zh="汽車螢幕位置">Car screen position</span>
         <select id="position">
-          <option value="right">Right of my screen</option>
-          <option value="left">Left of my screen</option>
-          <option value="above">Above my screen</option>
-          <option value="below">Below my screen</option>
-          <option value="manual">Keep my arrangement in System Settings</option>
+          <option value="right" data-zh="在我的螢幕右邊">Right of my screen</option>
+          <option value="left" data-zh="在我的螢幕左邊">Left of my screen</option>
+          <option value="above" data-zh="在我的螢幕上方">Above my screen</option>
+          <option value="below" data-zh="在我的螢幕下方">Below my screen</option>
+          <option value="manual" data-zh="保留系統設定中的排列">Keep my arrangement in System Settings</option>
         </select>
       </label>
     </div>
@@ -118,61 +127,61 @@
     <div id="displays"></div>
     <div id="vd-mac" hidden>
       <div class="row" style="margin-top:12px">
-        <label class="field">Car screen
+        <label class="field"><span data-zh="車型">Car screen</span>
           <select id="preset">
             <option value="1920x1200">Model 3 / Y (1920×1200)</option>
-            <option value="2200x1300">Model S / X 2021+ (2200×1300)</option>
+            <option value="2200x1300" data-zh="Model S / X 2021 年後 (2200×1300)">Model S / X 2021+ (2200×1300)</option>
             <option value="2650x1440">Cybertruck (2650×1440)</option>
-            <option value="1200x1920">Model S / X pre-2021 (portrait) (1200×1920)</option>
-            <option value="viewer">Match connected car browser</option>
+            <option value="1200x1920" data-zh="Model S / X 2021 年前，直向 (1200×1920)">Model S / X pre-2021 (portrait) (1200×1920)</option>
+            <option value="viewer" data-zh="配合已連接的汽車瀏覽器">Match connected car browser</option>
           </select>
         </label>
-        <label class="field">Text size
+        <label class="field"><span data-zh="文字大小">Text size</span>
           <select id="scale">
-            <option value="1">Native (smallest)</option>
-            <option value="1.25">Larger</option>
-            <option value="1.5">Large (recommended)</option>
-            <option value="2">Extra large</option>
+            <option value="1" data-zh="原始（最小）">Native (smallest)</option>
+            <option value="1.25" data-zh="較大">Larger</option>
+            <option value="1.5" data-zh="大（建議）">Large (recommended)</option>
+            <option value="2" data-zh="特大">Extra large</option>
           </select>
         </label>
-        <button class="primary" id="vd-create">Add virtual display</button>
-        <button id="vd-remove">Remove</button>
+        <button class="primary" id="vd-create" data-zh="加入虛擬顯示器">Add virtual display</button>
+        <button id="vd-remove" data-zh="移除">Remove</button>
       </div>
       <p class="hint" id="vd-status"></p>
     </div>
-    <p class="hint" id="vd-win" hidden>On Windows, add a virtual monitor with a virtual display driver (see native/windows/README.md), then set its Scale to 125–150% in Display settings for readable text.</p>
+    <p class="hint" id="vd-win" hidden data-zh="在 Windows 上，請用虛擬顯示器驅動程式加入虛擬顯示器（見 native/windows/README.md），然後在「顯示器」設定把它的縮放比例設為 125–150%，令文字更易閱讀。">On Windows, add a virtual monitor with a virtual display driver (see native/windows/README.md), then set its Scale to 125–150% in Display settings for readable text.</p>
   </section>
 
   <section>
-    <h2>Quality</h2>
+    <h2 data-zh="畫質">Quality</h2>
     <div class="row">
-      <label class="field">Frame rate
+      <label class="field"><span data-zh="幀率">Frame rate</span>
         <select id="fps"><option>30</option><option>60</option></select>
       </label>
-      <label class="field">Max bitrate
+      <label class="field"><span data-zh="最高位元率">Max bitrate</span>
         <select id="bitrate"><option value="5">5 Mbps</option><option value="8">8 Mbps</option><option value="12">12 Mbps</option><option value="20">20 Mbps</option><option value="30">30 Mbps</option></select>
       </label>
-      <label class="field">Preferred codec
+      <label class="field"><span data-zh="首選編碼格式">Preferred codec</span>
         <select id="codec"><option>H264</option><option>VP9</option><option>VP8</option><option>AV1</option></select>
       </label>
-      <label class="field">Scroll speed
-        <select id="scroll"><option value="0.5">Slow</option><option value="1">Normal</option><option value="1.6">Fast</option></select>
+      <label class="field"><span data-zh="捲動速度">Scroll speed</span>
+        <select id="scroll"><option value="0.5" data-zh="慢">Slow</option><option value="1" data-zh="正常">Normal</option><option value="1.6" data-zh="快">Fast</option></select>
       </label>
     </div>
-    <p class="hint">Changes apply to the next connection. H.264 is usually decoded in hardware by the car.</p>
+    <p class="hint" data-zh="更改會在下次連線時生效。汽車通常以硬件解碼 H.264。">Changes apply to the next connection. H.264 is usually decoded in hardware by the car.</p>
     <div class="row" style="margin-top:14px">
-      <label class="field">Port
-        <input type="number" id="port" min="80" max="65535" placeholder="Auto" style="width:110px">
+      <label class="field"><span data-zh="連接埠">Port</span>
+        <input type="number" id="port" min="80" max="65535" placeholder="Auto" data-zh-placeholder="自動" style="width:110px">
       </label>
-      <button id="port-apply">Apply port</button>
+      <button id="port-apply" data-zh="套用連接埠">Apply port</button>
       <span class="hint" id="port-status" style="margin:0"></span>
     </div>
-    <p class="hint">Leave empty for automatic (80, or 8787 if 80 is taken). Use 80 or 1024–65535. Changing it reconnects the car.</p>
-    <label class="row" style="margin-top:12px;color:var(--text)"><input type="checkbox" id="login" style="accent-color:var(--amber)"> Open DriveDesk when I log in</label>
+    <p class="hint" data-zh="留空即自動（80；如 80 已被佔用則用 8787）。可用 80 或 1024–65535。DriveDesk 亦會一直使用 8787 作共用車用地址。更改後汽車會重新連線。">Leave empty for automatic (80, or 8787 if 80 is taken). Use 80 or 1024–65535. DriveDesk also always listens on 8787 for the shared car address. Changing it reconnects the car.</p>
+    <label class="row" style="margin-top:12px;color:var(--text)"><input type="checkbox" id="login" style="accent-color:var(--amber)"> <span data-zh="登入時自動開啟 DriveDesk">Open DriveDesk when I log in</span></label>
   </section>
 
   <section>
-    <h2>Connected screens</h2>
+    <h2 data-zh="已連接的螢幕">Connected screens</h2>
     <div id="sessions"></div>
     <p class="warn" id="input-error" hidden></p>
   </section>

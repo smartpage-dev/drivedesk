@@ -12,10 +12,14 @@
  */
 const { execFile } = require('child_process');
 
-const RANGES = {
-  '100.99.0.1': 'Shared range 100.99.0.x (default)',
-  '198.18.0.1': 'Benchmark range 198.18.0.x (try if the default fails)'
-};
+const L = (lang, en, zh) => (lang === 'zh' ? zh : en);
+const RANGE_IDS = ['100.99.0.1', '198.18.0.1'];
+function ranges(lang) {
+  return {
+    '100.99.0.1': L(lang, 'Shared range 100.99.0.x (default)', '共用範圍 100.99.0.x（預設）'),
+    '198.18.0.1': L(lang, 'Benchmark range 198.18.0.x (try if the default fails)', '測試範圍 198.18.0.x（預設無效時試用）')
+  };
+}
 
 function isPrivate(ip) {
   const [a, b] = ip.split('.').map(Number);
@@ -24,12 +28,12 @@ function isPrivate(ip) {
 function isLinkLocal(ip) { return ip.startsWith('169.254.'); }
 
 /** Turns a LAN address into what the car should type, and whether the car can reach it. */
-function describe(ip, port) {
-  const suffix = port && port !== 80 ? `:${port}` : '';
+function describe(ip, port, carPort = port) {
+  const sfx = (p) => (p && p !== 80 ? `:${p}` : '');
   if (isPrivate(ip) || isLinkLocal(ip)) {
-    return { ip, carReachable: false, url: `http://${ip}${suffix}`, carUrl: null };
+    return { ip, carReachable: false, url: `http://${ip}${sfx(port)}`, carUrl: null };
   }
-  return { ip, carReachable: true, url: `http://${ip}${suffix}`, carUrl: `http://${ip.replace(/\./g, '-')}.sslip.io${suffix}` };
+  return { ip, carReachable: true, url: `http://${ip}${sfx(port)}`, carUrl: `http://${ip.replace(/\./g, '-')}.sslip.io${sfx(carPort)}` };
 }
 
 function run(cmd, args) {
@@ -41,17 +45,17 @@ function run(cmd, args) {
 }
 
 /** Asks for the admin password once, then sets the hotspot range. User re-toggles the hotspot afterwards. */
-async function prepareHotspot(gateway = '100.99.0.1') {
-  if (!RANGES[gateway]) return { ok: false, error: 'Unknown range' };
+async function prepareHotspot(gateway = '100.99.0.1', lang = 'en') {
+  if (!RANGE_IDS.includes(gateway)) return { ok: false, error: L(lang, 'Unknown range', '未知的範圍') };
   const base = gateway.split('.').slice(0, 3).join('.');
 
   if (process.platform === 'darwin') {
     const cmd = `/usr/bin/defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict-add ` +
       `SharingNetworkNumberStart ${base}.1 SharingNetworkNumberEnd ${base}.254 SharingNetworkMask 255.255.255.0`;
     const r = await run('/usr/bin/osascript', ['-e',
-      `do shell script "${cmd}" with administrator privileges with prompt "DriveDesk needs to change the Internet Sharing address range so your car can connect."`]);
-    if (!r.ok) return { ok: false, error: /User canceled|-128/.test(r.error) ? 'Cancelled' : r.error };
-    return { ok: true, next: 'Turn Internet Sharing off and on again in System Settings > General > Sharing.' };
+      `do shell script "${cmd}" with administrator privileges with prompt "${L(lang, 'DriveDesk needs to change the Internet Sharing address range so your car can connect.', 'DriveDesk 需要更改互聯網共享的地址範圍，讓你的汽車可以連接。')}"`]);
+    if (!r.ok) return { ok: false, error: /User canceled|-128/.test(r.error) ? L(lang, 'Cancelled', '已取消') : r.error };
+    return { ok: true, next: L(lang, 'Turn Internet Sharing off and on again in System Settings > General > Sharing.', '請在系統設定 > 一般 > 共享，把互聯網共享關閉再重新開啟。') };
   }
 
   if (process.platform === 'win32') {
@@ -59,11 +63,11 @@ async function prepareHotspot(gateway = '100.99.0.1') {
     const inner = `reg add ${key} /v ScopeAddress /t REG_SZ /d ${base}.1 /f & reg add ${key} /v ScopeAddressBackup /t REG_SZ /d ${base}.1 /f`;
     const r = await run('powershell.exe', ['-NoProfile', '-Command',
       `Start-Process -FilePath cmd.exe -ArgumentList '/c ${inner}' -Verb RunAs -Wait -WindowStyle Hidden`]);
-    if (!r.ok) return { ok: false, error: /canceled|cancelled/i.test(r.error) ? 'Cancelled' : r.error };
-    return { ok: true, next: 'Turn Mobile hotspot off and on again in Settings > Network & internet > Mobile hotspot.' };
+    if (!r.ok) return { ok: false, error: /canceled|cancelled/i.test(r.error) ? L(lang, 'Cancelled', '已取消') : r.error };
+    return { ok: true, next: L(lang, 'Turn Mobile hotspot off and on again in Settings > Network & internet > Mobile hotspot.', '請在設定 > 網絡和互聯網 > 流動熱點，把熱點關閉再重新開啟。') };
   }
 
-  return { ok: false, error: 'Only macOS and Windows are supported.' };
+  return { ok: false, error: L(lang, 'Only macOS and Windows are supported.', '只支援 macOS 及 Windows。') };
 }
 
 function sharingSettingsUrl() {
@@ -72,4 +76,4 @@ function sharingSettingsUrl() {
     : 'ms-settings:network-mobilehotspot';
 }
 
-module.exports = { RANGES, isPrivate, describe, prepareHotspot, sharingSettingsUrl };
+module.exports = { RANGE_IDS, ranges, isPrivate, describe, prepareHotspot, sharingSettingsUrl };

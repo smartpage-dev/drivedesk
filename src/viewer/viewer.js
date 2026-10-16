@@ -10,6 +10,21 @@
     del: function (k) { try { localStorage.removeItem('dd-' + k); } catch (e) {} }
   };
 
+  // ---- Language: English / Traditional Chinese. Follows the car's language; the toolbar can switch it.
+  var LANG = (function () {
+    var o = store.get('lang', '');
+    if (o === 'en' || o === 'zh') return o;
+    return /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+  })();
+  function T(en, zh) { return LANG === 'zh' ? zh : en; }
+  (function applyStatic() {
+    document.documentElement.lang = LANG === 'zh' ? 'zh-Hant' : 'en';
+    if (LANG !== 'zh') return;
+    var els = document.querySelectorAll('[data-zh]');
+    for (var i = 0; i < els.length; i++) els[i].innerHTML = els[i].getAttribute('data-zh');
+  })();
+  document.getElementById('btn-lang').textContent = LANG === 'zh' ? 'English' : '中文';
+
   var ws = null, pc = null, authed = false, retryMs = 1000, retryTimer = null;
   var displays = [], displayId = Number(store.get('display', 0)) || null;
   var mode = store.get('mode', 'touch');          // 'touch' | 'trackpad'
@@ -34,11 +49,12 @@
   }
   function buildKeypad() {
     var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Clear', '0', 'Delete'];
+    var names = { Clear: T('Clear', '清除'), Delete: T('Delete', '刪除') };
     var pad = $('keypad');
     pad.innerHTML = '';
     keys.forEach(function (k) {
       var b = document.createElement('button');
-      b.textContent = k;
+      b.textContent = names[k] || k;
       if (k.length > 1) b.className = 'aux';
       b.addEventListener('click', function () {
         if (k === 'Clear') entered = '';
@@ -69,25 +85,25 @@
     clearTimeout(retryTimer);
     if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} }
     closePc();
-    show('status', 'Connecting…');
+    show('status', T('Connecting…', '連線中…'));
 
     ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
     ws.onopen = function () { send({ t: 'hello', pin: pin, viewport: viewport(), displayId: displayId }); };
     ws.onmessage = function (ev) {
       var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
       if (msg.t === 'error') {
-        if (msg.code === 'pin') { store.del('pin'); return askPin('That PIN didn’t match. Check your computer and try again.'); }
-        if (msg.code === 'locked') { store.del('pin'); return askPin('Too many attempts. Try again in ' + msg.retryInSec + ' seconds.'); }
-        if (msg.code === 'full') { authed = false; return show('status', 'Three screens are already connected. Disconnect one to use this screen.'); }
+        if (msg.code === 'pin') { store.del('pin'); return askPin(T('That PIN didn’t match. Check your computer and try again.', 'PIN 碼不正確，請檢查電腦上顯示的號碼再試。')); }
+        if (msg.code === 'locked') { store.del('pin'); return askPin(T('Too many attempts. Try again in ' + msg.retryInSec + ' seconds.', '嘗試次數過多，請於 ' + msg.retryInSec + ' 秒後再試。')); }
+        if (msg.code === 'full') { authed = false; return show('status', T('Three screens are already connected. Disconnect one to use this screen.', '已有三個螢幕連接，請先中斷其中一個。')); }
       } else if (msg.t === 'welcome') {
         authed = true; retryMs = 1000;
         displays = msg.displays || [];
         displayId = msg.displayId; store.set('display', displayId);
         updateToolbar();
-        show('status', 'Waiting for video…');
+        show('status', T('Waiting for video…', '等待影像中…'));
       } else if (msg.t === 'restart') {
         displayId = msg.displayId; store.set('display', displayId);
-        closePc(); show('status', 'Switching display…');
+        closePc(); show('status', T('Switching display…', '正在切換顯示器…'));
       } else if (msg.t === 'signal') {
         onSignal(msg.data);
       }
@@ -95,7 +111,7 @@
     ws.onclose = function () {
       closePc();
       if (!authed && !store.get('pin', '')) return;
-      show('status', 'Connection lost. Reconnecting…');
+      show('status', T('Connection lost. Reconnecting…', '連線中斷，正在重新連線…'));
       retryTimer = setTimeout(connect, retryMs);
       retryMs = Math.min(retryMs * 2, 8000);
     };
@@ -112,7 +128,7 @@
       var p = video.play(); if (p && p.catch) p.catch(function () {});
     };
     pc.onconnectionstatechange = function () {
-      if (pc && pc.connectionState === 'failed') { show('status', 'Video connection failed. Retrying…'); ws && ws.close(); }
+      if (pc && pc.connectionState === 'failed') { show('status', T('Video connection failed. Retrying…', '影像連線失敗，正在重試…')); ws && ws.close(); }
     };
     return pc;
   }
@@ -125,7 +141,7 @@
         .then(function () { return p.createAnswer(); })
         .then(function (a) { return p.setLocalDescription(a); })
         .then(function () { send({ t: 'signal', data: { sdp: p.localDescription.toJSON() } }); })
-        .catch(function (e) { show('status', 'Could not start video: ' + e.message); });
+        .catch(function (e) { show('status', T('Could not start video: ', '無法播放影像：') + e.message); });
     } else if (data.candidate) {
       p.addIceCandidate(data.candidate).catch(function () {});
     }
@@ -295,11 +311,12 @@
   $('handle').addEventListener('click', function () { if ($('toolbar').hidden) showToolbar(); else $('toolbar').hidden = true; });
 
   function updateToolbar() {
-    $('btn-mode').textContent = mode === 'touch' ? 'Mode: touch' : 'Mode: trackpad';
-    $('btn-invert').textContent = invert ? 'Scroll: reversed' : 'Scroll: natural';
+    $('btn-mode').textContent = mode === 'touch' ? T('Mode: touch', '模式：觸控') : T('Mode: trackpad', '模式：觸控板');
+    $('btn-invert').textContent = invert ? T('Scroll: reversed', '捲動：反向') : T('Scroll: natural', '捲動：自然');
     var cur = null;
     for (var i = 0; i < displays.length; i++) if (displays[i].id === displayId) cur = i;
-    $('btn-display').textContent = 'Display ' + (cur === null ? '?' : cur + 1) + ' of ' + displays.length;
+    var num = (cur === null ? '?' : cur + 1);
+    $('btn-display').textContent = T('Display ' + num + ' of ' + displays.length, '顯示器 ' + num + '／' + displays.length);
     $('btn-display').hidden = displays.length < 2;
     $('btn-stats').className = $('stats').hidden ? '' : 'on';
   }
@@ -323,6 +340,7 @@
       if (req) { try { var r = req.call(el); if (r && r.catch) r.catch(function () {}); } catch (x) {} }
     }
     else if (act === 'reconnect') { retryMs = 1000; connect(); }
+    else if (act === 'lang') { store.set('lang', LANG === 'zh' ? 'en' : 'zh'); location.reload(); return; }
     else if (act === 'forget') { store.del('pin'); if (ws) { ws.onclose = null; ws.close(); } closePc(); askPin(); }
     updateToolbar();
   });

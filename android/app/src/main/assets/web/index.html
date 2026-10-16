@@ -9,7 +9,7 @@
 <body>
   <div id="pin-screen" class="screen">
     <div class="pin-box">
-      <p class="pin-title">Enter the PIN shown on your phone</p>
+      <p class="pin-title" data-zh="輸入手機上顯示的 PIN 碼">Enter the PIN shown on your phone</p>
       <div class="pin-dots" id="pin-dots"></div>
       <p class="pin-msg" id="pin-msg" role="status"></p>
       <div class="keypad" id="keypad"></div>
@@ -21,20 +21,23 @@
     <div id="surface" aria-label="Phone screen"></div>
     <button id="handle" aria-label="Show controls"></button>
     <div id="toolbar" hidden>
-      <button data-act="back" class="touch-only">Back</button>
-      <button data-act="home" class="touch-only">Home</button>
-      <button data-act="recents" class="touch-only">Recent apps</button>
-      <button data-act="stats" id="btn-stats">Stats</button>
-      <button data-act="fullscreen">Full screen</button>
-      <button data-act="reconnect">Reconnect</button>
-      <button data-act="forget">Sign out</button>
+      <button data-act="back" class="touch-only" data-zh="返回">Back</button>
+      <button data-act="home" class="touch-only" data-zh="主畫面">Home</button>
+      <button data-act="recents" class="touch-only" data-zh="最近使用">Recent apps</button>
+      <button data-act="sound" id="btn-sound" hidden>Sound: off</button>
+      <button data-act="stats" id="btn-stats" data-zh="統計">Stats</button>
+      <button data-act="fullscreen" data-zh="全螢幕">Full screen</button>
+      <button data-act="reconnect" data-zh="重新連線">Reconnect</button>
+      <button data-act="forget" data-zh="登出">Sign out</button>
+      <button data-act="lang" id="btn-lang">中文</button>
     </div>
     <div id="stats" hidden></div>
-    <div id="hint" hidden>Touch control is off. Turn it on in the DriveDesk app on your phone.</div>
+    <button id="sound-banner" hidden data-zh="輕按以在車上播放聲音">Tap to play sound in the car</button>
+    <div id="hint" hidden data-zh="觸控控制已關閉。請在手機的 DriveDesk app 開啟。">Touch control is off. Turn it on in the DriveDesk app on your phone.</div>
   </div>
 
   <div id="status" class="screen" hidden>
-    <p id="status-text">Connecting…</p>
+    <p id="status-text" data-zh="連線中…">Connecting…</p>
   </div>
 
   <script src="phone.js"></script>

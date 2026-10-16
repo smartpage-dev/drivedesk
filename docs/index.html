@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DriveDesk</title>
+<meta name="description" content="Show your Mac, PC, Android phone, or Nintendo Switch on your Tesla screen.">
+<style>
+  :root { --slate: #1c2733; --panel: #243241; --line: #34465a; --text: #e8edf2; --muted: #8a99a8; --amber: #f2a93b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--slate); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 22px 48px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 28px; font-size: 17px; }
+  h2 { font-size: 19px; margin: 32px 0 10px; }
+  a { color: var(--amber); }
+  .big { display: block; width: 100%; text-align: left; text-decoration: none; background: var(--amber); color: var(--slate);
+         border: 0; border-radius: 14px; padding: 22px 24px; font: inherit; font-size: 26px; font-weight: 700; cursor: pointer; }
+  .big small { display: block; font-size: 16px; font-weight: 500; opacity: .8; margin-top: 2px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-top: 14px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .addr { font-size: 22px; font-variant-numeric: tabular-nums; }
+  input { font: inherit; font-size: 22px; width: 90px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--slate); color: var(--text); }
+  .btn { font: inherit; font-size: 20px; padding: 12px 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; text-decoration: none; display: inline-block; }
+  .btn.primary { background: var(--amber); color: var(--slate); border-color: var(--amber); font-weight: 600; }
+  ul { padding-left: 20px; } li { margin-bottom: 6px; }
+  .muted { color: var(--muted); }
+  .dl { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .dl:first-child { border-top: 0; }
+  .switch { margin-top: 36px; font-size: 15px; }
+  [hidden] { display: none !important; }
+  .car .big { font-size: 32px; padding: 28px; }
+  .car .lead, .car li { font-size: 19px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>DriveDesk</h1>
+  <p class="lead" data-zh="在 Tesla 螢幕上顯示你的 Mac、PC、Android 手機或 Nintendo Switch。所有數據只在你自己的 Wi-Fi 內傳送。">Show your Mac, PC, Android phone, or Nintendo Switch on your Tesla screen. Everything stays on your own Wi-Fi.</p>
+
+  <!-- ================= In the car ================= -->
+  <section id="car" hidden>
+    <a class="big" id="go-main" href="http://100-99-0-1.sslip.io:8787" data-zh="連接<small>手機上的 DriveDesk，或 Mac／PC 的 DriveDesk 熱點</small>">Connect
+      <small>DriveDesk on your phone, or the DriveDesk hotspot on your Mac or PC</small></a>
+
+    <div class="card">
+      <h2 style="margin-top:0" data-zh="汽車內使用路由器？">Using a router in the car?</h2>
+      <p class="muted" style="margin-top:0" data-zh="輸入 DriveDesk 顯示的手機或電腦地址的最後一組數字。">Enter the last number of your phone's or computer's address, as shown in DriveDesk.</p>
+      <div class="row">
+        <span class="addr">198.18.0.</span>
+        <input id="last" inputmode="numeric" maxlength="3" aria-label="Last number of the address">
+        <button class="btn primary" id="go-router" data-zh="連接">Connect</button>
+      </div>
+    </div>
+
+    <h2 data-zh="提示">Tips</h2>
+    <ul>
+      <li data-zh="按網址列的星號儲存此頁面，下次只需輕按一下。">Tap the star in the address bar to save this page. Next time it's one tap.</li>
+      <li data-zh="請先泊好車。行車時汽車瀏覽器不能使用。">Park first. The car's browser doesn't work while driving.</li>
+      <li data-zh="汽車必須與你的裝置連接同一個 Wi-Fi：手機熱點、電腦的 DriveDesk 熱點，或汽車路由器。">The car must be on the same Wi-Fi as your device: your phone's hotspot, your computer's DriveDesk hotspot, or your car router.</li>
+      <li data-zh="無法連接？請確認裝置上的 DriveDesk 正在分享，而且顯示的橙色地址相符。">"Can't connect"? Check DriveDesk on your device says it's sharing, and that the orange address it shows matches.</li>
+    </ul>
+  </section>
+
+  <!-- ================= Everywhere else: downloads ================= -->
+  <section id="get" hidden>
+    <a class="big" id="dl-main" href="#"><span data-zh="下載 DriveDesk">Download DriveDesk</span><small id="dl-sub"></small></a>
+    <p class="muted" id="dl-note"></p>
+
+    <div class="card" id="dl-all"><p class="muted" data-zh="正在載入下載項目…">Loading downloads…</p></div>
+
+    <h2 data-zh="運作方式">How it works</h2>
+    <ul>
+      <li data-zh="<b>Mac 或 Windows：</b>你的電腦會多出一個在汽車上的螢幕。"><b>Mac or Windows:</b> your computer becomes an extra screen in the car.</li>
+      <li data-zh="<b>Android：</b>把手機畫面鏡像到汽車，並可觸控操作，無需電腦。"><b>Android:</b> mirror your phone to the car, with touch control. No laptop needed.</li>
+      <li data-zh="<b>Nintendo Switch</b>（安裝 SysDVR 的自製韌體）：透過 Android app 把遊戲串流到汽車。"><b>Nintendo Switch</b> (custom firmware with SysDVR): stream games to the car through the Android app.</li>
+      <li data-zh="<b>iPhone：</b>透過 Mac，使用「iPhone 鏡像輸出」或 AirPlay。"><b>iPhone:</b> through a Mac using iPhone Mirroring or AirPlay.</li>
+    </ul>
+    <p><a id="guide" href="#" data-zh="逐步安裝指南">Step-by-step install guide</a></p>
+  </section>
+
+  <p class="switch muted"><a href="#" id="toggle"></a> · <a href="#" id="lang-toggle"></a></p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  // ---- Language: English / Traditional Chinese
+  var LANG = (function () {
+    var o = null; try { o = localStorage.getItem('dd-lang'); } catch (e) {}
+    if (o === 'en' || o === 'zh') return o;
+    return /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+  })();
+  function T(en, zh) { return LANG === 'zh' ? zh : en; }
+  (function applyStatic() {
+    document.documentElement.lang = LANG === 'zh' ? 'zh-Hant' : 'en';
+    if (LANG !== 'zh') return;
+    var els = document.querySelectorAll('[data-zh]');
+    for (var i = 0; i < els.length; i++) els[i].innerHTML = els[i].getAttribute('data-zh');
+  })();
+  $('lang-toggle').textContent = LANG === 'zh' ? 'English' : '中文';
+  $('lang-toggle').onclick = function (e) { e.preventDefault(); try { localStorage.setItem('dd-lang', LANG === 'zh' ? 'en' : 'zh'); } catch (x) {} location.reload(); };
+  $('dl-sub').textContent = T('Finding the latest version…', '正在尋找最新版本…');
+  // owner/repo from https://OWNER.github.io/REPO/
+  var owner = location.hostname.split('.')[0] || 'smartpage-dev';
+  var repo = location.pathname.split('/')[1] || 'drivedesk';
+  if (location.hostname.indexOf('github.io') < 0) { owner = 'smartpage-dev'; repo = 'drivedesk'; }
+  var releases = 'https://github.com/' + owner + '/' + repo + '/releases/latest';
+  $('guide').href = 'https://github.com/' + owner + '/' + repo + '/blob/main/' + T('INSTALL.md', 'INSTALL.zh-Hant.md');
+
+  var ua = navigator.userAgent;
+  var inCar = /Tesla/i.test(ua) || location.hash === '#car';
+  function show() {
+    $('car').hidden = !inCar; $('get').hidden = inCar;
+    document.body.className = inCar ? 'car' : '';
+    $('toggle').textContent = inCar ? T('Not in the car? Show downloads', '不在車上？顯示下載') : T('In the car? Show connect buttons', '在車上？顯示連接按鈕');
+  }
+  $('toggle').onclick = function (e) { e.preventDefault(); inCar = !inCar; show(); if (!inCar) loadDownloads(); };
+
+  // ---- car router address, remembered
+  try { $('last').value = localStorage.getItem('dd-last') || ''; } catch (e) {}
+  $('go-router').onclick = function () {
+    var n = parseInt($('last').value, 10);
+    if (!(n >= 1 && n <= 254)) { $('last').focus(); return; }
+    try { localStorage.setItem('dd-last', String(n)); } catch (e) {}
+    location.href = 'http://198-18-0-' + n + '.sslip.io:8787';
+  };
+
+  // ---- downloads from the latest GitHub release
+  var loaded = false;
+  function loadDownloads() {
+    if (loaded) return; loaded = true;
+    var os = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Mac/i.test(ua) ? 'mac' : /Win/i.test(ua) ? 'win' : 'other';
+    var labels = [
+      { re: /mac-arm64\.dmg$/, name: T('Mac with Apple chip (M1 or newer)', 'Apple 晶片 Mac（M1 或更新）'), os: 'mac' },
+      { re: /mac-x64\.dmg$/, name: T('Mac with Intel chip', 'Intel 晶片 Mac'), os: 'mac' },
+      { re: /win-x64\.exe$/, name: 'Windows', os: 'win' },
+      { re: /\.apk$/, name: T('Android phone', 'Android 手機'), os: 'android' }
+    ];
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://api.github.com/repos/' + owner + '/' + repo + '/releases/latest');
+    xhr.onload = function () {
+      var rel; try { rel = JSON.parse(xhr.responseText); } catch (e) { rel = null; }
+      if (xhr.status !== 200 || !rel || !rel.assets) return fallback();
+      var rows = [], main = null;
+      labels.forEach(function (l) {
+        rel.assets.forEach(function (a) {
+          if (!l.re.test(a.name)) return;
+          rows.push('<div class="dl"><span>' + l.name + '<br><span class="muted">' + a.name + '</span></span><a class="btn" href="' + a.browser_download_url + '">' + T('Download', '下載') + '</a></div>');
+          if (!main && l.os === os) main = { url: a.browser_download_url, name: l.name };
+        });
+      });
+      $('dl-all').innerHTML = rows.join('') || '<p class="muted">' + T('No downloads in the latest release yet.', '最新版本暫時未有下載檔案。') + '</p>';
+      var v = rel.tag_name ? ' ' + rel.tag_name : '';
+      if (os === 'ios') {
+        $('dl-main').href = $('guide').href + T('#iphone', '');
+        $('dl-sub').textContent = T('iPhone works through a Mac. See how', 'iPhone 需透過 Mac 使用，查看方法');
+      } else if (main) {
+        $('dl-main').href = main.url;
+        $('dl-sub').textContent = T('For ', '適用於 ') + main.name + v;
+        if (os === 'mac') $('dl-note').textContent = T('Not sure which Mac you have? Apple menu > About This Mac. "Chip: Apple M…" means Apple chip.',
+          '不確定你的 Mac 型號？按蘋果選單 > 關於這部 Mac。顯示「晶片：Apple M…」即是 Apple 晶片。');
+      } else {
+        $('dl-main').href = '#dl-all';
+        $('dl-sub').textContent = T('Choose your device below', '請在下方選擇你的裝置') + v;
+      }
+    };
+    xhr.onerror = fallback;
+    xhr.send();
+    function fallback() {
+      $('dl-main').href = releases;
+      $('dl-sub').textContent = T('Open the downloads page', '開啟下載頁面');
+      $('dl-all').innerHTML = '<p><a href="' + releases + '">' + T('See all downloads on GitHub', '在 GitHub 查看所有下載') + '</a></p>';
+    }
+  }
+
+  show();
+  if (!inCar) loadDownloads();
+})();
+</script>
+</body>
+</html>

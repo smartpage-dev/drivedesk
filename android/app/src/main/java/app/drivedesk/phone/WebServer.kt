@@ -23,7 +23,8 @@ import java.util.concurrent.LinkedBlockingDeque
 class WebServer(
     private val ctx: Context,
     private val hub: StreamHub,
-    private val onControl: (JSONObject, Client) -> Unit
+    private val onControl: (JSONObject, Client) -> Unit,
+    private val source: String = "phone"   // "phone" (screen mirroring) or "switch" (Nintendo Switch relay)
 ) {
     private var server: ServerSocket? = null
     private val pool = Executors.newCachedThreadPool()
@@ -136,7 +137,8 @@ class WebServer(
                     fails.remove(ip)
                     if (hub.count() >= 3) { conn.send(WsConnection.TEXT, """{"t":"error","code":"full"}""".toByteArray()); break }
                     val c = Client(conn)
-                    c.text(JSONObject().put("t", "welcome").put("touch", TouchService.instance != null).toString())
+                    c.text(JSONObject().put("t", "welcome").put("source", source)
+                        .put("touch", source == "phone" && TouchService.instance != null).toString())
                     hub.add(c)
                     client = c
                 } else {
@@ -199,6 +201,7 @@ class WsConnection(private val sock: Socket, private val input: DataInputStream,
 /** One connected car/tablet. A writer thread keeps a slow viewer from stalling the encoder. */
 class Client(private val conn: WsConnection) {
     @Volatile var needKey = true
+    @Volatile var wantsAudio = false
     @Volatile private var open = true
     private val queue = LinkedBlockingDeque<Pair<Int, ByteArray>>()
     private val writer = Thread({
@@ -215,10 +218,13 @@ class Client(private val conn: WsConnection) {
 
     /** Returns false (and drops the backlog) when the viewer has fallen behind. */
     fun frame(b: ByteArray): Boolean {
-        if (queue.size > 30) { queue.clear(); return false }
+        if (queue.size > 60) { queue.clear(); return false }
         queue.offer(WsConnection.BINARY to b)
         return true
     }
+
+    /** Audio is dropped (not queued) when the viewer is behind, so it never delays video. */
+    fun audio(b: ByteArray) { if (queue.size < 40) queue.offer(WsConnection.BINARY to b) }
 
     fun close() {
         open = false

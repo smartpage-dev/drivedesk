@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DriveDesk</string>
+    <string name="touch_service_label">DriveDesk 觸控控制</string>
+    <string name="touch_service_description">DriveDesk 分享畫面時，讓你可以在汽車螢幕上點按、滑動，以及使用返回／主畫面來操作這部手機。DriveDesk 不會透過此服務讀取你螢幕上的內容。</string>
+</resources>

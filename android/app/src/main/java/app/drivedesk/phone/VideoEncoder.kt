@@ -18,7 +18,7 @@ class VideoEncoder(
     private val bitrate: Int,
     private val fps: Int,
     private val hub: StreamHub
-) {
+) : KeySource {
     private lateinit var codec: MediaCodec
     lateinit var surface: Surface
         private set
@@ -62,7 +62,7 @@ class VideoEncoder(
         thread = Thread({ drain() }, "encoder").apply { start() }
     }
 
-    fun requestKeyFrame() {
+    override fun requestKeyFrame() {
         try {
             codec.setParameters(Bundle().apply { putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0) })
         } catch (_: Exception) { }

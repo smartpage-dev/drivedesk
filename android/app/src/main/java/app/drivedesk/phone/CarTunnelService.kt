@@ -22,7 +22,7 @@ import java.io.FileInputStream
  */
 class CarTunnelService : VpnService() {
     companion object {
-        const val VIRTUAL_IP = "100.99.9.9"
+        const val VIRTUAL_IP = "100.99.0.1"   // same address as the desktop hotspot, so the car needs one favourite
         @Volatile var active = false
             private set
         @Volatile private var instance: CarTunnelService? = null
@@ -45,7 +45,7 @@ class CarTunnelService : VpnService() {
     private fun startTunnel() {
         try {
             val b = Builder()
-                .setSession("DriveDesk car link")
+                .setSession(tr("DriveDesk car link", "DriveDesk 汽車連接"))
                 .addAddress(VIRTUAL_IP, 32)
                 .addRoute(VIRTUAL_IP, 32)
                 .setMtu(1500)

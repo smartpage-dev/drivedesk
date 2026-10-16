@@ -8,17 +8,34 @@ import java.util.concurrent.CopyOnWriteArrayList
  *   text   {"t":"meta","w":W,"h":H}             new stream size (start / rotation)
  *   binary [flags:u8][ptsMicros:u64 BE][H.264 Annex-B bytes]
  *          flags bit0 = codec config (SPS/PPS), bit1 = keyframe
+ *   binary [flags=4][0:u64][PCM bytes]          audio (only to viewers that turned sound on)
+ *   text   {"t":"audio-meta","rate":R,"ch":C}   audio format
  */
+/** Anything that can be asked for a fresh keyframe (phone encoder, Switch stream). */
+interface KeySource { fun requestKeyFrame() }
+
 class StreamHub {
     private val clients = CopyOnWriteArrayList<Client>()
     @Volatile private var meta: String? = null
     @Volatile private var config: ByteArray? = null
-    @Volatile var encoder: VideoEncoder? = null
+    @Volatile var encoder: KeySource? = null
     @Volatile private var lastKeyRequest = 0L
+    @Volatile private var audioMeta: String? = null
+
+    fun onAudioFormat(rate: Int, channels: Int) {
+        audioMeta = """{"t":"audio-meta","rate":$rate,"ch":$channels}"""
+        for (c in clients) c.text(audioMeta!!)
+    }
+
+    fun onAudio(pcm: ByteArray) {
+        if (clients.none { it.wantsAudio }) return
+        val pkt = packet(4, 0, pcm)
+        for (c in clients) if (c.wantsAudio) c.audio(pkt)
+    }
 
     fun count() = clients.size
 
-    fun onNewStream(w: Int, h: Int, enc: VideoEncoder) {
+    fun onNewStream(w: Int, h: Int, enc: KeySource) {
         meta = """{"t":"meta","w":$w,"h":$h}"""
         config = null
         encoder = enc
@@ -50,6 +67,7 @@ class StreamHub {
 
     fun add(c: Client) {
         meta?.let { c.text(it) }
+        audioMeta?.let { c.text(it) }
         config?.let { c.binary(it) }
         c.needKey = true
         clients.add(c)

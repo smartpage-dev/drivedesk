@@ -34,6 +34,29 @@ function portList() {
   return [80, 8787];
 }
 let PORT = null;
+
+// ---- UI language
+function uiLang() {
+  if (config.lang === 'en' || config.lang === 'zh') return config.lang;
+  return String(app.getLocale() || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+}
+const tr = (en, zh) => (uiLang() === 'zh' ? zh : en);
+/** Translates the fixed English messages that come from helper modules. */
+function trMsg(msg) {
+  if (!msg || uiLang() !== 'zh') return msg;
+  const known = [
+    [/^On Windows, add the virtual display/, '在 Windows 上，請用虛擬顯示器驅動程式加入虛擬顯示器（見 native/windows/README.md）。'],
+    [/^Helper not built/, '輔助程式未建置。請執行：npm run build:mac-helper'],
+    [/^Timed out waiting for the virtual display/, '等待虛擬顯示器逾時。'],
+    [/^Helper exited with code (\d+)/, '輔助程式已結束（代碼 $1）。'],
+    [/^Input injection is only implemented/, '只支援在 macOS 及 Windows 上控制滑鼠。'],
+    [/^Could not load native input bindings/, '無法載入滑鼠控制元件（koffi）。']
+  ];
+  for (const [re, zh] of known) if (re.test(msg)) return msg.replace(re, zh).replace(/^(.*?。).*$/s, '$1');
+  return msg;
+}
+/** Port used in car addresses: the shared 8787 whenever it's available. */
+function carPort() { return PORT === 8787 || PORT2 === 8787 ? 8787 : PORT; }
 const VIEWER_DIR = path.join(__dirname, 'viewer');
 const MAX_SESSIONS = 3;
 
@@ -49,7 +72,8 @@ const defaults = {
   vd: { width: 2200, height: 1300, scale: 1.5, position: 'right' }, // Model S/X 2021+ default
   port: null,            // null = automatic
   mode: 'extend',        // 'extend' (car is a second screen) | 'mirror' (car copies the main screen)
-  carRange: '100.99.0.1' // hotspot range outside RFC 1918, which Tesla's browser blocks
+  carRange: '100.99.0.1', // hotspot range outside RFC 1918, which Tesla's browser blocks
+  lang: 'auto'           // 'auto' (follow the system) | 'en' | 'zh' (Traditional Chinese)
 };
 let config = { ...defaults };
 
@@ -73,7 +97,7 @@ function lanUrls() {
   const out = [];
   for (const [name, addrs] of Object.entries(os.networkInterfaces())) {
     for (const a of addrs || []) {
-      if (a.family === 'IPv4' && !a.internal) out.push({ name, ...carnet.describe(a.address, PORT) });
+      if (a.family === 'IPv4' && !a.internal) out.push({ name, ...carnet.describe(a.address, PORT, carPort()) });
     }
   }
   return out;
@@ -109,14 +133,15 @@ function publicState() {
     port: PORT,
     urls: lanUrls(),
     pin: config.pin,
-    settings: { defaultDisplayId: config.defaultDisplayId, fps: config.fps, bitrateMbps: config.bitrateMbps, codec: config.codec, scrollSpeed: config.scrollSpeed, vd: config.vd, port: config.port, mode: config.mode, carRange: config.carRange },
-    carRanges: carnet.RANGES,
+    settings: { defaultDisplayId: config.defaultDisplayId, fps: config.fps, bitrateMbps: config.bitrateMbps, codec: config.codec, scrollSpeed: config.scrollSpeed, vd: config.vd, port: config.port, mode: config.mode, carRange: config.carRange, lang: config.lang },
+    lang: uiLang(),
+    carRanges: carnet.ranges(uiLang()),
     portFromEnv: !!process.env.DRIVEDESK_PORT,
     displays: displayList(),
     sessions: [...sessions.entries()].map(([id, s]) => ({ id, ip: s.ip, displayId: s.displayId, viewport: s.viewport, stats: s.stats || null })),
-    vd: vdisplay.status(),
+    vd: { ...vdisplay.status(), error: trMsg(vdisplay.status().error) },
     inputReady: input.ready,
-    inputError: input.error || null,
+    inputError: trMsg(input.error) || null,
     setup: setupChecks(),
     launchAtLogin: app.getLoginItemSettings().openAtLogin
   };
@@ -128,17 +153,22 @@ function setupChecks() {
   if (process.platform === 'darwin') {
     const screenOk = systemPreferences.getMediaAccessStatus('screen') === 'granted';
     const axOk = systemPreferences.isTrustedAccessibilityClient(false);
-    items.push({ id: 'screen', ok: screenOk, title: 'Screen Recording permission', fix: 'Open settings', detail: 'Needed to stream the display. After turning it on, quit and reopen DriveDesk.' });
-    items.push({ id: 'accessibility', ok: axOk, title: 'Accessibility permission', fix: 'Allow', detail: 'Needed so taps on the car screen can click on your Mac.' });
+    items.push({ id: 'screen', ok: screenOk, title: tr('Screen Recording permission', '螢幕錄製權限'), fix: tr('Open settings', '開啟設定'),
+      detail: tr('Needed to stream the display. After turning it on, quit and reopen DriveDesk.', '串流畫面需要此權限。開啟後，請結束並重新開啟 DriveDesk。') });
+    items.push({ id: 'accessibility', ok: axOk, title: tr('Accessibility permission', '輔助使用權限'), fix: tr('Allow', '允許'),
+      detail: tr('Needed so taps on the car screen can click on your Mac.', '讓汽車螢幕上的點按可以操作你的 Mac。') });
     const vd = vdisplay.status();
-    items.push({ id: 'vd', ok: vd.running, title: 'Virtual display', fix: 'Add display', detail: vd.error || 'Gives the car its own screen instead of a copy of yours.' });
+    items.push({ id: 'vd', ok: vd.running, title: tr('Virtual display', '虛擬顯示器'), fix: tr('Add display', '加入顯示器'),
+      detail: trMsg(vd.error) || tr('Gives the car its own screen instead of a copy of yours.', '讓汽車擁有獨立螢幕，而不是複製你的畫面。') });
   } else if (process.platform === 'win32') {
     const hasVirtual = displayList().some((d) => d.virtualGuess || (!d.primary && !d.internal));
-    items.push({ id: 'driver', ok: hasVirtual, title: 'Virtual monitor (optional)', fix: 'Get driver', detail: 'Without it, the car mirrors your main screen. With it, the car becomes a second screen.' });
+    items.push({ id: 'driver', ok: hasVirtual, title: tr('Virtual monitor (optional)', '虛擬顯示器（可選）'), fix: tr('Get driver', '下載驅動程式'),
+      detail: tr('Without it, the car mirrors your main screen. With it, the car becomes a second screen.', '未安裝時，汽車會鏡像顯示主螢幕；安裝後，汽車會成為第二個螢幕。') });
   }
   const urls = lanUrls();
-  items.push({ id: 'network', ok: urls.some((u) => u.carReachable), title: 'Car-compatible network', fix: null,
-    detail: urls.length ? 'Tesla blocks home-network addresses like 192.168.x.x. Set up the car hotspot below.' : 'Not connected to any network.' });
+  items.push({ id: 'network', ok: urls.some((u) => u.carReachable), title: tr('Car-compatible network', '汽車可連接的網絡'), fix: null,
+    detail: urls.length ? tr('Tesla blocks home-network addresses like 192.168.x.x. Set up the car hotspot below.', 'Tesla 會封鎖 192.168.x.x 這類家用網絡地址。請在下方設定車用熱點。')
+                        : tr('Not connected to any network.', '未連接任何網絡。') });
   return items;
 }
 
@@ -163,15 +193,15 @@ ipcMain.handle('set-login', (_e, on) => { app.setLoginItemSettings({ openAtLogin
 
 ipcMain.handle('set-port', async (_e, port) => {
   const p = port === null || port === '' || Number(port) === 0 ? null : Math.round(Number(port));
-  if (p !== null && (!(p === 80 || (p >= 1024 && p <= 65535)))) return { ok: false, error: 'Use 80, or a number from 1024 to 65535.' };
+  if (p !== null && (!(p === 80 || (p >= 1024 && p <= 65535)))) return { ok: false, error: tr('Use 80, or a number from 1024 to 65535.', '請使用 80，或 1024 至 65535 之間的數字。') };
   config.port = p; saveConfig();
   await restartServer();
-  return { ok: PORT !== null, port: PORT, error: PORT === null ? 'That port is in use by another app. Try another.' : null };
+  return { ok: PORT !== null, port: PORT, error: PORT === null ? tr('That port is in use by another app. Try another.', '該連接埠已被其他程式使用，請試另一個。') : null };
 });
 
 ipcMain.handle('car-prepare', async (_e, range) => {
-  if (range && carnet.RANGES[range]) { config.carRange = range; saveConfig(); }
-  const r = await carnet.prepareHotspot(config.carRange);
+  if (range && carnet.RANGE_IDS.includes(range)) { config.carRange = range; saveConfig(); }
+  const r = await carnet.prepareHotspot(config.carRange, uiLang());
   if (r.ok) shell.openExternal(carnet.sharingSettingsUrl());
   setTimeout(broadcastState, 1000);
   return r;
@@ -217,7 +247,7 @@ const STATIC = {
   '/viewer.js': ['viewer.js', 'application/javascript; charset=utf-8'],
   '/viewer.css': ['viewer.css', 'text/css; charset=utf-8']
 };
-const server = http.createServer((req, res) => {
+function handleHttp(req, res) {
   const url = new URL(req.url, 'http://x');
   const entry = STATIC[url.pathname];
   if (!entry) { res.writeHead(404); return res.end('Not found'); }
@@ -226,10 +256,22 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': entry[1], 'Cache-Control': 'no-store' });
     res.end(buf);
   });
-});
+}
+const server = http.createServer(handleHttp);
+// Always also listen on 8787, so every DriveDesk (Mac, PC, Android) can share one car address:
+// http://100-99-0-1.sslip.io:8787 on the DriveDesk hotspot range. Saved once as a car favourite.
+const UNIVERSAL_PORT = 8787;
+const server2 = http.createServer(handleHttp);
+let PORT2 = null;
 
 // ---------- WebSocket (signaling + input) ----------
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 1 << 20 });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 1 << 20 });
+for (const srv of [server, server2]) {
+  srv.on('upgrade', (req, socket, head) => {
+    if (new URL(req.url, 'http://x').pathname !== '/ws') return socket.destroy();
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  });
+}
 // ws re-emits HTTP server errors (e.g. port 80 refused); handled by listen() fallback, so just log here.
 wss.on('error', (e) => console.warn('ws:', e.code || e.message));
 
@@ -384,7 +426,7 @@ ipcMain.on('stats', (_e, { sessionId, stats }) => {
 });
 ipcMain.handle('get-state', () => publicState());
 ipcMain.handle('set-settings', (_e, patch) => {
-  const allowed = ['defaultDisplayId', 'fps', 'bitrateMbps', 'codec', 'scrollSpeed', 'vd'];
+  const allowed = ['defaultDisplayId', 'fps', 'bitrateMbps', 'codec', 'scrollSpeed', 'vd', 'lang'];
   for (const k of allowed) if (k in patch) config[k] = patch[k];
   saveConfig(); broadcastState();
   return publicState();
@@ -399,7 +441,7 @@ ipcMain.handle('vd-create', async (_e, opts) => {
     saveConfig();
   }
   setTimeout(broadcastState, 500);
-  return result;
+  return { ...result, error: trMsg(result.error) };
 });
 ipcMain.handle('vd-remove', () => { vdisplay.stop(); setTimeout(broadcastState, 500); return true; });
 
@@ -438,9 +480,17 @@ function listen(i, done) {
     PORT = port;
     server.removeListener('error', onError);
     console.log('DriveDesk listening on', lanUrls().map((u) => u.url).join(', '));
+    listenSecondary();
     broadcastState();
     if (done) done();
   });
+}
+
+function listenSecondary() {
+  if (PORT === UNIVERSAL_PORT || PORT2 !== null || process.env.DRIVEDESK_PORT) return;
+  const onErr = (e) => console.warn(`shared port ${UNIVERSAL_PORT} unavailable (${e.code})`);
+  server2.once('error', onErr);
+  server2.listen(UNIVERSAL_PORT, '0.0.0.0', () => { server2.removeListener('error', onErr); PORT2 = UNIVERSAL_PORT; broadcastState(); });
 }
 
 /** Re-binds the server after the port setting changes. Connected screens reconnect automatically. */
@@ -448,6 +498,7 @@ function restartServer() {
   return new Promise((resolve) => {
     for (const s of sessions.values()) { try { s.ws.close(); } catch {} }
     PORT = null;
+    if (PORT2 !== null) { PORT2 = null; server2.close(); if (server2.closeAllConnections) server2.closeAllConnections(); }
     server.close(() => listen(0, resolve));
     // close() waits for open keep-alive sockets; don't hang forever on them.
     if (server.closeAllConnections) server.closeAllConnections();

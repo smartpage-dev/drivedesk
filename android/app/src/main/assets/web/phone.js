@@ -11,8 +11,23 @@
     set: function (k, v) { try { localStorage.setItem('ddp-' + k, v); } catch (e) {} },
     del: function (k) { try { localStorage.removeItem('ddp-' + k); } catch (e) {} }
   };
+  // ---- Language: English / Traditional Chinese. Follows the car's language; the toolbar can switch it.
+  var LANG = (function () {
+    var o = store.get('lang', '');
+    if (o === 'en' || o === 'zh') return o;
+    return /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+  })();
+  function T(en, zh) { return LANG === 'zh' ? zh : en; }
+  (function applyStatic() {
+    document.documentElement.lang = LANG === 'zh' ? 'zh-Hant' : 'en';
+    if (LANG !== 'zh') return;
+    var els = document.querySelectorAll('[data-zh]');
+    for (var i = 0; i < els.length; i++) els[i].innerHTML = els[i].getAttribute('data-zh');
+  })();
+  $('btn-lang').textContent = LANG === 'zh' ? 'English' : '中文';
+
   var video = $('video'), surface = $('surface');
-  var ws = null, authed = false, retryMs = 1000, retryTimer = null, touchOn = false;
+  var ws = null, authed = false, retryMs = 1000, retryTimer = null, touchOn = false, isSwitch = false;
 
   // =====================================================================
   // fMP4 muxer
@@ -121,7 +136,7 @@
       this.key = k; this.sps = sps; this.pps = pps;
       var codec = 'video/mp4; codecs="avc1.' + hex2(sps[1]) + hex2(sps[2]) + hex2(sps[3]) + '"';
       if (!window.MediaSource || !MediaSource.isTypeSupported(codec)) {
-        status('This browser cannot play the phone\u2019s video (' + codec + ').'); return;
+        status(T('This browser cannot play the phone\u2019s video (' + codec + ').', '此瀏覽器無法播放手機的影像（' + codec + '）。')); return;
       }
       var self = this;
       this.sb = null; this.queue = []; this.seq = 1; this.dts = 0; this.lastPts = null; this.waitKey = true;
@@ -200,6 +215,89 @@
   setInterval(function () { player.fps = player.frames; player.frames = 0; }, 1000);
 
   // =====================================================================
+  // Sound: 16-bit PCM from the Switch (SysDVR), played with Web Audio.
+  // Byte order is detected from the audio itself (RTP L16 is big-endian by spec;
+  // this also copes with little-endian), and playback is delayed to roughly match the video.
+  // =====================================================================
+  var sound = {
+    ctx: null, on: false, rate: 48000, ch: 2, next: 0, order: null, dBE: 0, dLE: 0, probes: 0, available: false,
+
+    setFormat: function (rate, ch) {
+      this.rate = rate || 48000; this.ch = ch || 2; this.available = true;
+      $('btn-sound').hidden = false;
+      if (!this.on && store.get('sound', '1') === '1') $('sound-banner').hidden = false;
+      this.ui();
+    },
+
+    start: function () {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { status(T('This browser cannot play sound.', '此瀏覽器無法播放聲音。')); return; }
+      if (!this.ctx) { try { this.ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { this.ctx = new AC(); } }
+      if (this.ctx.resume) this.ctx.resume();
+      this.on = true; this.next = 0;
+      store.set('sound', '1');
+      $('sound-banner').hidden = true;
+      send({ t: 'audio', on: true });
+      this.ui();
+    },
+
+    stop: function () {
+      this.on = false;
+      store.set('sound', '0');
+      send({ t: 'audio', on: false });
+      if (this.ctx && this.ctx.suspend) this.ctx.suspend();
+      this.ui();
+    },
+
+    ui: function () { $('btn-sound').textContent = this.on ? T('Sound: on', '聲音：開') : T('Sound: off', '聲音：關'); $('btn-sound').className = this.on ? 'on' : ''; },
+
+    // Real audio changes smoothly between samples; the wrong byte order looks like loud noise.
+    probe: function (b) {
+      var ch = this.ch, n = Math.min(b.length >> 1, 4096), i, be, le, pbe, ple;
+      for (i = ch; i < n; i++) {
+        be = (b[2 * i] << 8) | b[2 * i + 1]; if (be > 32767) be -= 65536;
+        le = (b[2 * i + 1] << 8) | b[2 * i]; if (le > 32767) le -= 65536;
+        pbe = (b[2 * (i - ch)] << 8) | b[2 * (i - ch) + 1]; if (pbe > 32767) pbe -= 65536;
+        ple = (b[2 * (i - ch) + 1] << 8) | b[2 * (i - ch)]; if (ple > 32767) ple -= 65536;
+        this.dBE += Math.abs(be - pbe); this.dLE += Math.abs(le - ple);
+      }
+      if (this.dBE + this.dLE > 0) this.probes++;
+      if (this.probes >= 8) this.order = this.dBE <= this.dLE ? 'be' : 'le';
+    },
+
+    // Matches the video's current buffering so sound and picture line up roughly.
+    delay: function () {
+      var lag = video.buffered.length ? video.buffered.end(video.buffered.length - 1) - video.currentTime : 0;
+      return Math.max(0.08, Math.min(0.5, lag + 0.08));
+    },
+
+    push: function (b) {
+      if (!this.on || !this.ctx) return;
+      if (!this.order) { this.probe(b); if (!this.order) return; }
+      var ch = this.ch, frames = Math.floor(b.length / 2 / ch);
+      if (!frames) return;
+      var buf = this.ctx.createBuffer(ch, frames, this.rate), data = [], c, f, idx, v;
+      for (c = 0; c < ch; c++) data.push(buf.getChannelData(c));
+      var big = this.order === 'be';
+      for (f = 0; f < frames; f++) {
+        for (c = 0; c < ch; c++) {
+          idx = (f * ch + c) * 2;
+          v = big ? ((b[idx] << 8) | b[idx + 1]) : ((b[idx + 1] << 8) | b[idx]);
+          if (v > 32767) v -= 65536;
+          data[c][f] = v / 32768;
+        }
+      }
+      var src = this.ctx.createBufferSource();
+      src.buffer = buf; src.connect(this.ctx.destination);
+      var now = this.ctx.currentTime, target = now + this.delay();
+      if (this.next < now + 0.01 || this.next > target + 0.25) this.next = target; // resync after gaps or drift
+      src.start(this.next);
+      this.next += buf.duration;
+    }
+  };
+  $('sound-banner').addEventListener('click', function () { sound.start(); });
+
+  // =====================================================================
   // Screens, PIN, connection
   // =====================================================================
   function show(which, text) {
@@ -218,10 +316,11 @@
   }
   function buildKeypad() {
     var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Clear', '0', 'Delete'];
+    var names = { Clear: T('Clear', '清除'), Delete: T('Delete', '刪除') };
     var pad = $('keypad'); pad.innerHTML = '';
     keys.forEach(function (k) {
       var b = document.createElement('button');
-      b.textContent = k; if (k.length > 1) b.className = 'aux';
+      b.textContent = names[k] || k; if (k.length > 1) b.className = 'aux';
       b.addEventListener('click', function () {
         if (k === 'Clear') entered = ''; else if (k === 'Delete') entered = entered.slice(0, -1);
         else if (entered.length < PIN_LEN) entered += k;
@@ -241,7 +340,7 @@
     if (!pin) return askPin();
     clearTimeout(retryTimer);
     if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} }
-    status('Connecting to your phone…');
+    status(T('Connecting to your phone…', '正在連接你的手機…'));
     ws = new WebSocket('ws://' + location.host + '/ws');
     ws.binaryType = 'arraybuffer';
     ws.onopen = function () { send({ t: 'hello', pin: pin }); };
@@ -250,26 +349,31 @@
         var dv = new DataView(ev.data), flags = dv.getUint8(0);
         var pts = dv.getUint32(1) * 4294967296 + dv.getUint32(5);
         var data = new Uint8Array(ev.data, 9);
-        if (flags & 1) player.onConfig(data); else player.onFrame(data, pts, (flags & 2) !== 0);
+        if (flags & 4) sound.push(data);
+        else if (flags & 1) player.onConfig(data); else player.onFrame(data, pts, (flags & 2) !== 0);
         return;
       }
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.t === 'error') {
-        if (m.code === 'pin') { store.del('pin'); return askPin('That PIN didn\u2019t match. Check the DriveDesk app on your phone.'); }
-        if (m.code === 'locked') { store.del('pin'); return askPin('Too many attempts. Try again in ' + m.retryInSec + ' seconds.'); }
-        if (m.code === 'full') { authed = false; return status('Three screens are already connected to this phone.'); }
+        if (m.code === 'pin') { store.del('pin'); return askPin(T('That PIN didn\u2019t match. Check the DriveDesk app on your phone.', 'PIN 碼不正確，請檢查手機 DriveDesk app 上顯示的號碼。')); }
+        if (m.code === 'locked') { store.del('pin'); return askPin(T('Too many attempts. Try again in ' + m.retryInSec + ' seconds.', '嘗試次數過多，請於 ' + m.retryInSec + ' 秒後再試。')); }
+        if (m.code === 'full') { authed = false; return status(T('Three screens are already connected to this phone.', '此手機已連接三個螢幕。')); }
       } else if (m.t === 'welcome') {
-        authed = true; retryMs = 1000; setTouch(!!m.touch);
-        status('Waiting for video…');
+        authed = true; retryMs = 1000; isSwitch = m.source === 'switch'; setTouch(!!m.touch);
+        if (sound.on) send({ t: 'audio', on: true });
+        if (isSwitch) document.title = 'DriveDesk Switch';
+        status(T('Waiting for video…', '等待影像中…'));
       } else if (m.t === 'meta') {
         player.setSize(m.w, m.h);
+      } else if (m.t === 'audio-meta') {
+        sound.setFormat(m.rate, m.ch);
       } else if (m.t === 'caps') {
         setTouch(!!m.touch);
       }
     };
     ws.onclose = function () {
       if (!authed && !store.get('pin', '')) return;
-      status('Connection lost. Reconnecting…');
+      status(T('Connection lost. Reconnecting…', '連線中斷，正在重新連線…'));
       retryTimer = setTimeout(connect, retryMs);
       retryMs = Math.min(retryMs * 2, 8000);
     };
@@ -281,7 +385,7 @@
     touchOn = on;
     var els = document.querySelectorAll('.touch-only');
     for (var i = 0; i < els.length; i++) els[i].hidden = !on;
-    $('hint').hidden = on;
+    $('hint').hidden = on || isSwitch;
     if (!on) setTimeout(function () { $('hint').hidden = true; }, 8000);
   }
 
@@ -301,7 +405,7 @@
   function count() { return Object.keys(active).length; }
 
   surface.addEventListener('pointerdown', function (e) {
-    if (!touchOn) { $('hint').hidden = false; setTimeout(function () { $('hint').hidden = true; }, 4000); return; }
+    if (!touchOn) { if (!isSwitch) { $('hint').hidden = false; setTimeout(function () { $('hint').hidden = true; }, 4000); } return; }
     var p = norm(e.clientX, e.clientY); if (!p) return;
     surface.setPointerCapture(e.pointerId);
     active[e.pointerId] = { pts: [p], last: Date.now() };
@@ -358,12 +462,14 @@
     var act = e.target.getAttribute('data-act'); if (!act) return;
     showToolbar();
     if (act === 'back' || act === 'home' || act === 'recents') send({ t: 'key', k: act });
+    else if (act === 'sound') { if (sound.on) sound.stop(); else sound.start(); }
     else if (act === 'stats') { $('stats').hidden = !$('stats').hidden; $('btn-stats').className = $('stats').hidden ? '' : 'on'; }
     else if (act === 'fullscreen') {
       var el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
       if (req) { try { var r = req.call(el); if (r && r.catch) r.catch(function () {}); } catch (x) {} }
     }
     else if (act === 'reconnect') { retryMs = 1000; connect(); }
+    else if (act === 'lang') { store.set('lang', LANG === 'zh' ? 'en' : 'zh'); location.reload(); return; }
     else if (act === 'forget') { store.del('pin'); if (ws) { ws.onclose = null; ws.close(); } askPin(); }
   });
   setInterval(function () {

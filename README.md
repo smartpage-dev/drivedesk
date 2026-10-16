@@ -2,7 +2,9 @@
 
 Show your **Mac, Windows PC, or Android phone** on your Tesla's touchscreen (or any tablet/laptop browser), with touch control. Everything stays on your local network: no account, no cloud relay.
 
-**Just want to use it?** See [INSTALL.md](INSTALL.md).
+**Just want to use it?** See [INSTALL.md](INSTALL.md). 中文安裝指南：[INSTALL.zh-Hant.md](INSTALL.zh-Hant.md)
+
+> **中文簡介：** DriveDesk 可以把你的 Mac、Windows 電腦、Android 手機或 Nintendo Switch 顯示在 Tesla 的螢幕上，並可觸控操作。所有數據只在你自己的網絡內傳送，無需帳戶，亦不經雲端。介面支援英文及繁體中文，會跟隨裝置語言自動切換。
 
 ```
  Mac / PC (Electron)                               Car browser
@@ -17,6 +19,16 @@ Show your **Mac, Windows PC, or Android phone** on your Tesla's touchscreen (or 
  iPhone ── iPhone Mirroring / AirPlay ──▶ Mac ──▶ DriveDesk (desktop) ──▶ car
 ```
 
+## Nintendo Switch (SysDVR)
+The Android app can relay a custom-firmware Switch running the SysDVR sysmodule in **Simple network mode** (RTSP on port 6666). `SwitchSource.kt` is a standards-based RTSP client (RFC 2326, RTP interleaved over TCP) with an RFC 6184 H.264 depacketizer (single NAL, STAP-A, FU-A). Access units go into the same `StreamHub` and car viewer as phone mirroring, with no re-encoding. The depacketizing algorithm was verified against ffmpeg's RTP output (STAP-A and FU-A, 90 frames pixel-identical); the Kotlin itself and SysDVR's RTSP server behaviour are untested. Audio: the RTSP L16 track is forwarded as raw PCM to viewers that turn sound on, and played with Web Audio (AudioBufferSourceNode scheduling, which works without HTTPS). Byte order is auto-detected from signal smoothness and delay tracks the video buffer. Detection, decoding (bit-exact) and gapless scheduling were tested with ffmpeg-generated PCM in both byte orders. SysDVR's TCP Bridge mode is a possible follow-up.
+
+## Languages
+All user-facing text is in English and Traditional Chinese:
+- **Desktop control window:** `data-zh` attributes on static text, `T(en, zh)` for dynamic text, and `tr()` / `trMsg()` in the main process. It follows the system language (`app.getLocale()`), with a Language selector to override.
+- **Car viewers and start page:** the same `data-zh` / `T()` approach, following the browser language, with a toolbar toggle stored in `localStorage`.
+- **Android:** `tr(en, zh)` (in `Util.kt`) follows the phone's language, and `res/values-zh/strings.xml` covers system-visible strings.
+- **Guides:** `INSTALL.md` and `INSTALL.zh-Hant.md`.
+
 ## What's in the repo
 
 | Path | What it is |
@@ -27,9 +39,20 @@ Show your **Mac, Windows PC, or Android phone** on your Tesla's touchscreen (or 
 | `android/` | Android app (Kotlin, no third-party libraries): capture, encoder, HTTP/WebSocket server, touch service, car viewer page |
 | `build/` | Installer pieces: Windows firewall rule, macOS ad-hoc signing |
 | `.github/workflows/release.yml` | Builds the `.dmg`, `.exe`, and `.apk` automatically |
+| `docs/` | Start page for GitHub Pages: car launcher and download picker |
 
 ## Tesla connection: why a hotspot is needed
 Tesla's browser refuses connections to RFC 1918 private addresses (10.x, 172.16–31.x, 192.168.x), which is what every home router and phone hotspot hands out. DriveDesk therefore has the laptop run the hotspot (macOS Internet Sharing / Windows Mobile Hotspot) on a range outside RFC 1918 (`100.99.0.x` by default, `198.18.0.x` as an alternative), and gives the car a hostname for it through sslip.io (`100-99-0-1.sslip.io` resolves to `100.99.0.1`). Setup code is in `src/carnet.js`. SideDisplay documents the same underlying restriction and the same hotspot-based approach.
+
+### Car router variant
+If the car has its own router and its LAN is set to a non-RFC 1918 range (`198.18.0.0/24` is suggested; `100.64.0.0/10` can collide with carrier CGNAT on 4G WANs), no workaround is needed. Every device gets a Tesla-reachable address. Both apps detect this: the desktop app shows the sslip.io address, and the Android app skips the VPN (`Net.directCarNetwork()`).
+
+## One car address
+Every mode uses `http://100-99-0-1.sslip.io:8787`, so the car needs a single favourite:
+- **Desktop:** the hotspot gateway is `100.99.0.1`, and the app always also listens on 8787, even when its main port is 80.
+- **Android:** the VPN virtual address is `100.99.0.1`, port 8787.
+
+`docs/index.html` is a static GitHub Pages start page. In a Tesla (detected from the user agent, or `#car`) it shows Connect buttons, including a car-router address helper for `198.18.0.x`. Elsewhere it reads the latest release from the GitHub API and offers the right download per OS. Its logic was tested against a stub DOM for the Tesla, Mac, Windows, Android, and iPhone cases, and a missing release.
 
 ## Design choices
 - **Local only, PIN protected.** 6-digit PIN, lockout after 5 wrong attempts. The car remembers the PIN.
@@ -65,7 +88,7 @@ gradle assembleDebug       # -> app/build/outputs/apk/debug/app-debug.apk
 - **Not run anywhere yet:** the Electron app, the Swift helper, the Kotlin app (no Android SDK or Kotlin compiler was available to compile it), the GitHub workflow, and anything on a real Tesla.
 - **Highest-risk items to test first:**
   - Whether the car accepts the `100.99.0.x` hotspot range and sslip.io hostnames (the alternative range is selectable in the UI), and whether the macOS `com.apple.nat` keys and the Windows `ScopeAddress` registry value still change the hotspot range on current OS versions.
-  - The Android car link (`CarTunnelService.kt`): a local-only VPN adds the virtual address `100.99.9.9` (only route: that /32; only app: DriveDesk) so the car can reach the phone's server through the hotspot. TeslaMirror documents the same virtual-IP + VPN approach. Reply routing to the hotspot while the VPN is active is the main thing to verify on a real phone.
+  - The Android car link (`CarTunnelService.kt`): a local-only VPN adds the virtual address `100.99.0.1` (only route: that /32; only app: DriveDesk) so the car can reach the phone's server through the hotspot. TeslaMirror documents the same virtual-IP + VPN approach. Reply routing to the hotspot while the VPN is active is the main thing to verify on a real phone.
   - macOS `CGVirtualDisplay` is undocumented; header and HiDPI behaviour are reconstructed from open-source projects.
   - Android encoder behaviour varies by phone maker; the app retries smaller sizes and simpler settings if the first configuration fails.
   - Tesla browser MSE/WebRTC playback varies by car computer and software version.

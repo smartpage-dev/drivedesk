@@ -1,5 +1,7 @@
 # Install DriveDesk
 
+English ｜ [中文](INSTALL.zh-Hant.md)
+
 Pick what you want to show on the car screen. Always park first; the car's browser doesn't work while driving.
 
 | I want to show… | Install on | Needs a laptop in the car? |
@@ -8,8 +10,35 @@ Pick what you want to show on the car screen. Always park first; the car's brows
 | My Windows PC as a second screen | Windows PC | Yes |
 | My Android phone | Android phone | No |
 | My iPhone | Mac (see "iPhone" below) | Yes |
+| My Nintendo Switch (custom firmware) | Android phone + SysDVR on the Switch | No |
 
-Download the files from the project's **Releases** page. If nobody has made the download files yet, follow **Make the download files** at the end of this guide first.
+DriveDesk shows English or Traditional Chinese automatically, following your device's language. On a computer, switch it with **Language / 語言** at the top right of the window; in the car, use the toolbar at the top of the screen.
+
+Download the files from the project's **Releases** page, or from the DriveDesk start page (`https://<owner>.github.io/drivedesk`), which picks the right one for your device. If nobody has made the download files yet, follow **Make the download files** at the end of this guide first.
+
+**In the car, one address for everything.** Phone app, Switch mode, and the Mac or Windows hotspot all use the same car address: `http://100-99-0-1.sslip.io:8787`. Open it once in the car's browser and tap the star to save it, or save the DriveDesk start page, which has a big **Connect** button.
+
+---
+
+## Easiest setup: a router in the car (recommended if you have one)
+
+Tesla's browser blocks the address ranges that routers normally use (`192.168.x.x`, `10.x.x.x`, `172.16–31.x.x`). If you have your own Wi-Fi router in the car, for example a 4G SIM router, change its network range once. After that, every device on it (car, laptop, phone, Switch) can talk to each other directly, and you skip the hotspot and VPN steps in the rest of this guide.
+
+1. Open the router's admin page and find the **LAN** settings (sometimes called LAN IP, DHCP, or Local network).
+2. Set:
+   - **Router (LAN) IP:** `198.18.0.1`
+   - **Subnet mask:** `255.255.255.0`
+   - **DHCP range:** `198.18.0.100` to `198.18.0.200`
+
+   Avoid `100.64.x.x` to `100.127.x.x` on a 4G router: mobile carriers often use those for the router's own internet connection, and the two would clash.
+3. Save. The router restarts, and its admin page is now at `http://198.18.0.1`. Reconnect your devices.
+4. Optional but handy: in the router's DHCP settings, give the Switch and laptop or phone a fixed address (a "static lease" or "address reservation"), so the car address never changes.
+
+Then use DriveDesk normally. It notices the car-friendly network, skips the hotspot and VPN steps, and shows the orange car address, for example `http://198-18-0-20.sslip.io` for a laptop.
+
+If the router refuses the address (some only allow `192.168`/`10`/`172.16` ranges), it can't be used this way. Routers running OpenWrt (including GL.iNet models, through their advanced settings) allow it.
+
+If the orange address doesn't load in the car, the router's DNS may be blocking it. Disable "DNS rebinding protection", or allow `sslip.io` as an exception.
 
 ---
 
@@ -64,11 +93,47 @@ Tip: the car address uses a free public naming service (sslip.io) to turn the ho
 4. Open DriveDesk and tap **Start sharing**.
    - The first time, Android asks to allow a **VPN connection**. Tap **OK**. It's local-only: it gives the phone an extra address that Tesla's browser accepts. Nothing goes over the internet through it, and other apps aren't affected.
    - Then tap **Start now** on the screen-sharing prompt.
-5. In the car's browser, type the orange address shown in the app, `http://100-99-9-9.sslip.io:8787`, and enter the PIN.
+5. In the car's browser, open the orange address shown in the app (`http://100-99-0-1.sslip.io:8787`, the same every time; save it as a favourite) and enter the PIN.
+
+**One-tap start:** pull down the notification shade, tap the edit (pencil) icon, and drag the **DriveDesk** tile into your quick settings. Tapping it starts or stops DriveDesk, in phone or Switch mode, whichever you used last.
 
 **Optional, control the phone from the car screen:** tap **Turn on touch control** in the app, then turn on **DriveDesk touch control** in Accessibility. If the switch is greyed out (Android 13 and newer): tap **Open App info**, tap the **⋮** menu, choose **Allow restricted settings**, and try again.
 
 Good to know: while sharing, DriveDesk's VPN replaces any other VPN you use. Phone audio still plays through the car over Bluetooth. Some apps (banking, Netflix and other streaming apps) block screen sharing and appear black; that's the app's choice and can't be bypassed.
+
+---
+
+## Nintendo Switch (custom firmware with SysDVR)
+
+The Switch streams its game video to your Android phone, and the phone passes it to the car. No laptop or capture card is needed, and the phone's screen can stay off.
+
+**What you need**
+- A Switch running Atmosphère with the **SysDVR** sysmodule installed (the full version, not USB-only). It's free and open source; get it from its GitHub releases page.
+- The DriveDesk Android app.
+- A game that supports video capture (holding the Capture button records a clip). Games that block recording won't stream.
+- Check your Switch firmware: SysDVR has been reported not to work properly on firmware 23.0.0.
+
+**One-time Switch setup**
+1. Copy SysDVR to the SD card as its guide describes, and reboot into Atmosphère.
+2. Open **SysDVR Settings** from the Homebrew menu, choose **Simple network mode** (the RTSP mode), and reboot.
+
+**Each time**
+1. Turn on the phone's hotspot (5 GHz, Wi-Fi 6 off), or use your car router if you set it up as described in "Easiest setup" above.
+2. Connect the **car**, the **Switch** and (if using a router) the **phone** to that network (on the Switch: System Settings > Internet).
+3. Start a game on the Switch.
+4. In DriveDesk on the phone, under **Nintendo Switch**, tap **Find my Switch** (or type its IP address from the Switch's Internet settings), then **Stream Switch to car**. Allow the VPN request the first time.
+5. In the car's browser, open the orange address and enter the PIN.
+
+Play with detached Joy-Cons or a Pro Controller.
+
+**Sound in the car:** when the stream starts, tap **Tap to play sound in the car** at the bottom of the car screen. The car's browser needs that one tap before it may play audio. You can switch sound on and off later from the toolbar (tap the tab at the top). The game audio then plays through the car speakers at the car's volume. Turn the Switch's own volume down if you hear it twice; the stream may stay at full volume either way.
+
+**Alternative, free to try:** pair the Switch's Bluetooth audio directly with the car. On the car, open the Bluetooth screen and choose to add a new device, so the car is discoverable. On the Switch, go to **System Settings > Bluetooth Audio > Pair Device**. This hasn't been confirmed to work with Teslas. While Bluetooth audio is on, the Switch allows only two wireless controllers.
+
+**Limitations**
+- Expect some delay (roughly a few tenths of a second). That's fine for slower games, but noticeable in fast action or rhythm games. Sound is delayed to roughly match the picture.
+- Quality is set by the Switch's own capture encoder. If the stream stutters, move the phone closer to the Switch and car.
+- Connecting a modified Switch to the internet carries a risk of a ban from Nintendo's online services. If you normally keep it offline or block Nintendo's servers, keep those protections on before joining the hotspot.
 
 ---
 
@@ -105,7 +170,7 @@ GitHub can build the Mac, Windows, and Android installers for you on its own com
    - Leave "Add a README" unticked. Click **Create repository**.
 3. Unzip `drivedesk.zip` on your computer.
 4. On the new repository page, click **uploading an existing file**.
-5. Open the unzipped `drivedesk` folder and drag **everything inside it** (not the folder itself) onto the upload page. You should see `src`, `android`, `native`, `build`, `.github`, `package.json`, and the guides.
+5. Open the unzipped `drivedesk` folder and drag **everything inside it** (not the folder itself) onto the upload page. You should see `src`, `android`, `native`, `build`, `docs`, `.github`, `package.json`, and the guides.
    - **On a Mac**, the `.github` folder is hidden. In Finder, press **Cmd + Shift + .** (period) to show it, then include it.
 6. Click **Commit changes**.
 7. Check that the file `.github/workflows/release.yml` appears in the repository. If it's missing (some browsers skip hidden folders):
@@ -129,12 +194,18 @@ These downloads only work for people signed in to GitHub, and they're deleted af
 
 ### 4. Publish a public download page (Release)
 1. On the repository page, click **Releases** (right side) > **Draft a new release**.
-2. Click **Choose a tag**, type `v0.2.0`, and click **Create new tag: v0.2.0 on publish**.
-3. Title it `DriveDesk 0.2.0` and click **Publish release**.
+2. Click **Choose a tag**, type `v0.3.0`, and click **Create new tag: v0.3.0 on publish**.
+3. Title it `DriveDesk 0.3.0` and click **Publish release**.
 4. Publishing the tag starts the build automatically (check the **Actions** tab). When it finishes, the installers are attached to the Release.
 5. Share the Release link. Anyone can download from it, no GitHub account needed.
 
-For a later version, change the version number in `package.json` and `android/app/build.gradle.kts`, upload the changed files, and publish a new Release with a new tag (for example `v0.2.1`).
+For a later version, change the version number in `package.json` and `android/app/build.gradle.kts`, upload the changed files, and publish a new Release with a new tag (for example `v0.3.1`).
+
+### 5. Turn on the DriveDesk start page (optional, recommended)
+The project includes a start page in the `docs` folder. In the car it shows a big **Connect** button; on a phone or computer it offers the right download.
+1. In the repository, open **Settings > Pages**.
+2. Under **Build and deployment**, set **Source** to **Deploy from a branch**, choose **main** and **/docs**, and click **Save**.
+3. After a minute the page is live at `https://<your-github-name>.github.io/drivedesk`. Share that link instead of the Releases page.
 
 ### If a build fails
 A red **X** means a step failed. Click the failed run, then the red job (mac, windows, or android), then the red step to see the error. Copy the last 30 or so lines of the error. That's what someone fixing it will need.

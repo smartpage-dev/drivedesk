@@ -11,7 +11,7 @@
 <body>
   <div id="pin-screen" class="screen">
     <div class="pin-box">
-      <p class="pin-title">Enter the PIN shown on your computer</p>
+      <p class="pin-title" data-zh="輸入電腦上顯示的 PIN 碼">Enter the PIN shown on your computer</p>
       <div class="pin-dots" id="pin-dots"></div>
       <p class="pin-msg" id="pin-msg" role="status"></p>
       <div class="keypad" id="keypad"></div>
@@ -27,16 +27,17 @@
       <button data-act="mode" id="btn-mode">Touch</button>
       <button data-act="display" id="btn-display">Display</button>
       <button data-act="invert" id="btn-invert">Scroll: natural</button>
-      <button data-act="stats" id="btn-stats">Stats</button>
-      <button data-act="fullscreen">Full screen</button>
-      <button data-act="reconnect">Reconnect</button>
-      <button data-act="forget">Sign out</button>
+      <button data-act="stats" id="btn-stats" data-zh="統計">Stats</button>
+      <button data-act="fullscreen" data-zh="全螢幕">Full screen</button>
+      <button data-act="reconnect" data-zh="重新連線">Reconnect</button>
+      <button data-act="forget" data-zh="登出">Sign out</button>
+      <button data-act="lang" id="btn-lang">中文</button>
     </div>
     <div id="stats" hidden></div>
   </div>
 
   <div id="status" class="screen" hidden>
-    <p id="status-text">Connecting…</p>
+    <p id="status-text" data-zh="連線中…">Connecting…</p>
   </div>
 
   <script src="viewer.js"></script>
