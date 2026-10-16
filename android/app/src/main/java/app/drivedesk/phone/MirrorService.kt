@@ -79,7 +79,7 @@ class MirrorService : Service() {
         }, handler)
         projection = mp
 
-        server = WebServer(this, hub) { msg, client -> onControl(msg, client) }.also {
+        server = WebServer(this, hub, { msg, client -> onControl(msg, client) }).also {
             try { it.start() } catch (e: Exception) { Log.e("DriveDesk", "server failed", e); stopSelf(); return START_NOT_STICKY }
         }
 
