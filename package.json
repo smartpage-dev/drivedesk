@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "build:mac-helper": "bash native/macos/build.sh",
-    "dist:mac": "bash native/macos/build.sh --universal && electron-builder --mac --arm64 --x64 --publish never",
+    "dist:mac": "bash native/macos/build.sh --universal && electron-builder --mac --arm64 --x64 --publish never && bash build/make-dmg.sh",
     "dist:win": "electron-builder --win --x64 --publish never",
     "check": "node --check src/main.js && node --check src/vdisplay.js && node --check src/input/index.js && node --check src/viewer/viewer.js && node --check src/control.js"
   },
@@ -34,7 +34,7 @@
     "afterPack": "build/adhoc-sign.js",
     "mac": {
       "target": [
-        "dmg"
+        "zip"
       ],
       "category": "public.app-category.productivity",
       "extraResources": [
@@ -46,22 +46,6 @@
       "extendInfo": {
         "NSLocalNetworkUsageDescription": "DriveDesk streams your screen to your car or tablet over the local network."
       }
-    },
-    "dmg": {
-      "title": "DriveDesk",
-      "contents": [
-        {
-          "x": 140,
-          "y": 180,
-          "type": "file"
-        },
-        {
-          "x": 400,
-          "y": 180,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
     },
     "win": {
       "target": [

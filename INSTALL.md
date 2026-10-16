@@ -45,7 +45,7 @@ If the orange address doesn't load in the car, the router's DNS may be blocking 
 ## Mac
 
 1. Download the `.dmg` for your Mac: **arm64** if you have an M1 or newer chip, **x64** for Intel. (Apple menu > About This Mac tells you which.)
-2. Open it and drag **DriveDesk** to **Applications**.
+2. Open it and drag **DriveDesk** to **Applications**. If there's only a `.zip` for your Mac, double-click it to unzip, then drag **DriveDesk** to **Applications**.
 3. Open DriveDesk. If macOS says it can't verify the developer: open **System Settings > Privacy & Security**, scroll down, click **Open Anyway**.
 4. DriveDesk shows a **Finish setup** list. Click each button until every dot is green:
    - **Screen Recording**: turn DriveDesk on, then quit and reopen DriveDesk.

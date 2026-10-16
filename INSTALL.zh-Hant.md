@@ -45,7 +45,7 @@ Tesla 瀏覽器會封鎖路由器一般使用的地址範圍（`192.168.x.x`、`
 ## Mac
 
 1. 下載適合你 Mac 的 `.dmg`：M1 或更新晶片選 **arm64**，Intel 晶片選 **x64**。（按蘋果選單 > 關於這部 Mac 可以查看。）
-2. 開啟檔案，把 **DriveDesk** 拖到「應用程式」（Applications）。
+2. 開啟檔案，把 **DriveDesk** 拖到「應用程式」（Applications）。如果你的 Mac 只有 `.zip` 檔，請按兩下解壓，再把 **DriveDesk** 拖到「應用程式」。
 3. 開啟 DriveDesk。如果 macOS 表示無法驗證開發者：開啟**系統設定 > 隱私權與安全性（Privacy & Security）**，向下捲動，按**仍要打開（Open Anyway）**。
 4. DriveDesk 會顯示「**完成設定**」清單。逐一按下按鈕，直至所有圓點變成綠色：
    - **螢幕錄製權限**：開啟 DriveDesk，然後結束並重新開啟 DriveDesk。

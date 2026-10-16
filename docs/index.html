@@ -133,8 +133,8 @@
     if (loaded) return; loaded = true;
     var os = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Mac/i.test(ua) ? 'mac' : /Win/i.test(ua) ? 'win' : 'other';
     var labels = [
-      { re: /mac-arm64\.dmg$/, name: T('Mac with Apple chip (M1 or newer)', 'Apple 晶片 Mac（M1 或更新）'), os: 'mac' },
-      { re: /mac-x64\.dmg$/, name: T('Mac with Intel chip', 'Intel 晶片 Mac'), os: 'mac' },
+      { re: /mac-arm64\.(dmg|zip)$/, name: T('Mac with Apple chip (M1 or newer)', 'Apple 晶片 Mac（M1 或更新）'), os: 'mac' },
+      { re: /mac-x64\.(dmg|zip)$/, name: T('Mac with Intel chip', 'Intel 晶片 Mac'), os: 'mac' },
       { re: /win-x64\.exe$/, name: 'Windows', os: 'win' },
       { re: /\.apk$/, name: T('Android phone', 'Android 手機'), os: 'android' }
     ];
@@ -144,9 +144,13 @@
       var rel; try { rel = JSON.parse(xhr.responseText); } catch (e) { rel = null; }
       if (xhr.status !== 200 || !rel || !rel.assets) return fallback();
       var rows = [], main = null;
+      // Prefer .dmg over .zip for Macs: show one download per device.
+      var assets = rel.assets.slice().sort(function (x, y) { return (/\.zip$/.test(x.name) ? 1 : 0) - (/\.zip$/.test(y.name) ? 1 : 0); });
       labels.forEach(function (l) {
-        rel.assets.forEach(function (a) {
-          if (!l.re.test(a.name)) return;
+        var shown = false;
+        assets.forEach(function (a) {
+          if (shown || !l.re.test(a.name)) return;
+          shown = true;
           rows.push('<div class="dl"><span>' + l.name + '<br><span class="muted">' + a.name + '</span></span><a class="btn" href="' + a.browser_download_url + '">' + T('Download', '下載') + '</a></div>');
           if (!main && l.os === os) main = { url: a.browser_download_url, name: l.name };
         });
